@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, memo } from "react";
-import { callAI, callAIStream, callAIText, callAIVision, getAnthropicHeaders, getApiKey, sanitizeApiKey, API_BASE } from "./src/api/anthropic.js";
+import { callAI, callAIStream, callAIText, callAIVision, getAnthropicHeaders, getApiKey, sanitizeApiKey, testApiKey, API_BASE } from "./src/api/anthropic.js";
 import { parseJSON } from "./src/utils/json.js";
 
 // ─── COLORS (CSS vars for theming) ───────────────────────────
@@ -3712,6 +3712,8 @@ export default function App(){
   var [isDark,setIsDark]=useState(true);
   var [showSettings,setShowSettings]=useState(false);
   var [apiKeyInput,setApiKeyInput]=useState(typeof localStorage!=="undefined"?localStorage.getItem("anthropic_api_key")||"":"");
+  var [apiKeyTestError,setApiKeyTestError]=useState("");
+  var [apiKeyTestLoading,setApiKeyTestLoading]=useState(false);
 
   useEffect(function(){
     var s=sessionStorage.getItem("chef_u");
@@ -3744,14 +3746,26 @@ export default function App(){
   if (!ready) return <div style={{minHeight:"100vh",background:"#0A0A0A",display:"flex",alignItems:"center",justifyContent:"center"}}><style>{makeCSS(true)}</style><Spinner size={28}/></div>;
   if (!user) return <div style={{minHeight:"100vh",background:"var(--bg)"}}><style>{makeCSS(isDark)}</style><Auth onLogin={function(u,g){if(g) loginGuest();else doLogin(u);}}/></div>;
 
-  function saveApiKey(){ if(typeof localStorage!=="undefined"){ var clean=sanitizeApiKey(apiKeyInput); localStorage.setItem("anthropic_api_key",clean); setApiKeyInput(clean); } setShowSettings(false); }
+  function saveApiKey(){ if(typeof localStorage!=="undefined"){ var clean=sanitizeApiKey(apiKeyInput); localStorage.setItem("anthropic_api_key",clean); setApiKeyInput(clean); } setShowSettings(false); setApiKeyTestError(""); }
+  async function testAndSaveApiKey(){
+    var clean=sanitizeApiKey(apiKeyInput);
+    if(!clean){ setApiKeyTestError("Lütfen API anahtarını girin."); return; }
+    setApiKeyTestError(""); setApiKeyTestLoading(true);
+    try{
+      var r=await testApiKey(clean);
+      if(r.ok){ if(typeof localStorage!=="undefined"){ localStorage.setItem("anthropic_api_key",clean); setApiKeyInput(clean); } setShowSettings(false); }
+      else setApiKeyTestError(r.error||"Anahtar geçersiz.");
+    }catch(e){ setApiKeyTestError(e&&e.message?e.message:"Test başarısız"); }
+    finally{ setApiKeyTestLoading(false); }
+  }
   var hasApiKey=!!getApiKey();
 
   return <div style={{minHeight:"100vh",background:"var(--bg)",color:C.cream}}>
     <style>{makeCSS(isDark)}</style>
     <ThemeToggle isDark={isDark} onToggle={toggleTheme} hasUser={true}/>
     <div style={{position:"fixed",top:10,right:10,zIndex:600,display:"flex",gap:4,alignItems:"center"}}>
-      <button onClick={function(){setApiKeyInput(typeof localStorage!=="undefined"?localStorage.getItem("anthropic_api_key")||"":"");setShowSettings(true);}} title="Ayarlar" style={{padding:"4px 8px",borderRadius:50,background:"var(--card)",border:"1px solid var(--border)",fontSize:14,color:C.muted}}>⚙️</button>
+      <span title={hasApiKey?"API anahtarı ayarlı":"API anahtarı gerekli"} style={{fontSize:14,opacity:hasApiKey?1:0.9}}>{hasApiKey?"🔑":"⚠️"}</span>
+      <button onClick={function(){setApiKeyInput(typeof localStorage!=="undefined"?localStorage.getItem("anthropic_api_key")||"":"");setApiKeyTestError("");setShowSettings(true);}} title="Ayarlar" style={{padding:"4px 8px",borderRadius:50,background:"var(--card)",border:"1px solid var(--border)",fontSize:14,color:C.muted}}>⚙️</button>
       <div style={{padding:"4px 9px",borderRadius:50,background:"var(--card)",border:"1px solid var(--border)",fontSize:11,color:C.muted}}>{isGuest?"👤":user}</div>
       <button onClick={logout} style={{padding:"4px 8px",borderRadius:50,background:"var(--card)",border:"1px solid var(--border)",fontSize:11,color:C.muted}}>✕</button>
     </div>
@@ -3759,12 +3773,14 @@ export default function App(){
       <div className="up" style={{background:"var(--card)",border:"1px solid var(--border)",borderRadius:16,padding:22,maxWidth:400,width:"100%"}} onClick={function(e){e.stopPropagation();}}>
         <div style={{fontSize:16,fontWeight:700,color:C.cream,marginBottom:8}}>⚙️ Ayarlar</div>
         <div style={{fontSize:12,color:C.muted,marginBottom:12}}>Anthropic API anahtarı (Menü/Şef/Kür AI özellikleri için)</div>
-        <input type="password" placeholder="sk-ant-..." value={apiKeyInput} onChange={function(e){setApiKeyInput(e.target.value);}} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:"1px solid var(--border)",background:"var(--card2)",color:C.cream,fontSize:13,marginBottom:12}}/>
-        <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
-          <button onClick={function(){setShowSettings(false);}} style={{padding:"8px 14px",borderRadius:9,border:"1px solid var(--border)",background:"var(--card2)",color:C.muted,fontSize:12}}>İptal</button>
-          <button onClick={saveApiKey} style={{padding:"8px 14px",borderRadius:9,border:"1.5px solid "+C.gold,background:"linear-gradient(135deg,rgba(212,168,67,0.2),rgba(212,168,67,0.06))",color:C.goldL,fontSize:12,fontWeight:600}}>Kaydet</button>
+        <input type="password" placeholder="sk-ant-..." value={apiKeyInput} onChange={function(e){setApiKeyInput(e.target.value);setApiKeyTestError("");}} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:"1px solid var(--border)",background:"var(--card2)",color:C.cream,fontSize:13,marginBottom:12}}/>
+        {apiKeyTestError&&<div style={{marginBottom:10,padding:"8px 12px",borderRadius:9,background:"rgba(224,82,82,0.1)",border:"1px solid rgba(224,82,82,0.3)",fontSize:12,color:C.red}}>⚠ {apiKeyTestError}</div>}
+        <div style={{display:"flex",gap:8,justifyContent:"flex-end",flexWrap:"wrap"}}>
+          <button onClick={function(){setShowSettings(false);setApiKeyTestError("");}} style={{padding:"8px 14px",borderRadius:9,border:"1px solid var(--border)",background:"var(--card2)",color:C.muted,fontSize:12}}>İptal</button>
+          <button onClick={saveApiKey} style={{padding:"8px 14px",borderRadius:9,border:"1px solid var(--border)",background:"var(--card2)",color:C.muted,fontSize:12}}>Sadece Kaydet</button>
+          <button onClick={testAndSaveApiKey} disabled={apiKeyTestLoading} style={{padding:"8px 14px",borderRadius:9,border:"1.5px solid "+C.gold,background:"linear-gradient(135deg,rgba(212,168,67,0.2),rgba(212,168,67,0.06))",color:C.goldL,fontSize:12,fontWeight:600}}>{apiKeyTestLoading?"Test ediliyor…":"🧪 Test Et & Kaydet"}</button>
         </div>
-        {hasApiKey?<div style={{marginTop:10,fontSize:11,color:C.green}}>✓ API anahtarı ayarlı</div>:<div style={{marginTop:10,fontSize:11,color:C.muted}}>Anahtar yoksa AI özellikleri çalışmaz</div>}
+        {hasApiKey&&!apiKeyTestError?<div style={{marginTop:10,fontSize:11,color:C.green}}>✓ API anahtarı ayarlı</div>:!hasApiKey&&!apiKeyTestError?<div style={{marginTop:10,fontSize:11,color:C.muted}}>Öneri: Önce "Test Et & Kaydet" ile anahtarı doğrulayın.</div>:null}
       </div>
     </div>}
     <div style={{paddingBottom:68}}>

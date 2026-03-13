@@ -43,6 +43,39 @@ export function getAnthropicHeaders() {
   return headers;
 }
 
+/** Verilen anahtar ile gerçek bir API çağrısı dener. Kaydetmeden önce test için kullanın. */
+export async function testApiKey(keyOrEmpty) {
+  const raw = typeof keyOrEmpty === 'string' ? keyOrEmpty : getApiKey();
+  const key = toHeaderSafe(raw);
+  if (!key) return { ok: false, error: 'Lütfen API anahtarını girin (sk-ant-...)' };
+  const headers = {
+    'Content-Type': 'application/json',
+    'anthropic-version': '2023-06-01',
+    'X-Client-Api-Key': key,
+  };
+  try {
+    const res = await fetch(API_BASE + '/v1/messages', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model: 'claude-3-5-haiku-20241022',
+        max_tokens: 20,
+        messages: [{ role: 'user', content: 'Say "OK"' }],
+      }),
+    });
+    const text = await res.text();
+    if (res.ok) return { ok: true };
+    let errMsg = 'HTTP ' + res.status;
+    try {
+      const j = JSON.parse(text);
+      errMsg = (j.error && (j.error.message || j.error.type)) || (j.message) || errMsg;
+    } catch (_) {}
+    return { ok: false, error: errMsg };
+  } catch (e) {
+    return { ok: false, error: (e && e.message) || 'Bağlantı hatası' };
+  }
+}
+
 export async function callAIStream(sysP, userP, onChunk, maxTok) {
   const res = await fetch(API_BASE + '/v1/messages', {
     method: 'POST',

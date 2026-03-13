@@ -11,7 +11,8 @@ export default async function handler(req, res) {
   }
 
   const path = Array.isArray(req.query.path) ? req.query.path.join('/') : (req.query.path || 'v1/messages');
-  const apiKey = (req.headers['x-client-api-key'] || req.headers['X-Client-Api-Key'] || process.env.ANTHROPIC_API_KEY || process.env.VITE_ANTHROPIC_API_KEY || '').trim();
+  const rawKey = (req.headers['x-client-api-key'] || process.env.ANTHROPIC_API_KEY || process.env.VITE_ANTHROPIC_API_KEY || '').trim();
+  const apiKey = rawKey.replace(/[^\x20-\x7E]/g, '').trim();
 
   if (!apiKey) {
     res.status(401).json({ error: 'API anahtarı gerekli. Vercel ortam değişkenlerine ANTHROPIC_API_KEY ekleyin veya uygulama Ayarlar\'dan girin.' });
