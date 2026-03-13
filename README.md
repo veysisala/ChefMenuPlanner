@@ -24,3 +24,4 @@ API anahtarını Vercel'de tanımlamazsanız, yayındaki sitede Ayarlar'dan da g
 
 - Node 18+
 - [Anthropic API anahtarı](https://console.anthropic.com/) (Menü/Şef/Kür AI özellikleri için)
+# ChefMenuPlanner
