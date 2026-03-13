@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, memo } from "react";
-import { callAI, callAIStream, callAIText, callAIVision, getAnthropicHeaders, getApiKey, API_BASE } from "./src/api/anthropic.js";
+import { callAI, callAIStream, callAIText, callAIVision, getAnthropicHeaders, getApiKey, sanitizeApiKey, API_BASE } from "./src/api/anthropic.js";
 import { parseJSON } from "./src/utils/json.js";
 
 // ─── COLORS (CSS vars for theming) ───────────────────────────
@@ -3744,7 +3744,7 @@ export default function App(){
   if (!ready) return <div style={{minHeight:"100vh",background:"#0A0A0A",display:"flex",alignItems:"center",justifyContent:"center"}}><style>{makeCSS(true)}</style><Spinner size={28}/></div>;
   if (!user) return <div style={{minHeight:"100vh",background:"var(--bg)"}}><style>{makeCSS(isDark)}</style><Auth onLogin={function(u,g){if(g) loginGuest();else doLogin(u);}}/></div>;
 
-  function saveApiKey(){ if(typeof localStorage!=="undefined"){ localStorage.setItem("anthropic_api_key",apiKeyInput.trim()); } setShowSettings(false); }
+  function saveApiKey(){ if(typeof localStorage!=="undefined"){ var clean=sanitizeApiKey(apiKeyInput); localStorage.setItem("anthropic_api_key",clean); setApiKeyInput(clean); } setShowSettings(false); }
   var hasApiKey=!!getApiKey();
 
   return <div style={{minHeight:"100vh",background:"var(--bg)",color:C.cream}}>

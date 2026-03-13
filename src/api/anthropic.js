@@ -7,6 +7,16 @@ function sleep(ms) {
 const USE_PROXY = typeof window !== 'undefined';
 export const API_BASE = USE_PROXY ? '/api/anthropic' : 'https://api.anthropic.com';
 
+/** Header'da kullanılacak API anahtarını temizler (gizli karakterler kaldırılır). Dışa aktarılır; Ayarlar'da kaydetmeden önce kullanın. */
+export function sanitizeApiKey(str) {
+  if (typeof str !== 'string') return '';
+  return str.replace(/[^\x20-\x7E]/g, '').trim();
+}
+
+function toHeaderSafe(str) {
+  return sanitizeApiKey(str);
+}
+
 export function getApiKey() {
   if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_ANTHROPIC_API_KEY) {
     return import.meta.env.VITE_ANTHROPIC_API_KEY;
@@ -22,12 +32,13 @@ export function getAnthropicHeaders() {
     'Content-Type': 'application/json',
     'anthropic-version': '2023-06-01',
   };
-  if (USE_PROXY) {
-    const key = getApiKey();
-    if (key) headers['X-Client-Api-Key'] = key;
-  } else {
-    const key = getApiKey();
-    if (key) headers['x-api-key'] = key;
+  const key = toHeaderSafe(getApiKey());
+  if (key) {
+    if (USE_PROXY) {
+      headers['X-Client-Api-Key'] = key;
+    } else {
+      headers['x-api-key'] = key;
+    }
   }
   return headers;
 }
@@ -85,7 +96,7 @@ export async function callAI(prompt, maxTok) {
       const body = await res.text();
       if (!res.ok) {
         if (res.status === 429) { await sleep(2500 * (att + 1)); continue; }
-        if (res.status === 401) throw new Error('Geçersiz veya eksik API anahtarı. Sağ üstten ⚙️ Ayarlar\'a girip Anthropic API anahtarını girin.');
+        if (res.status === 401) throw new Error('API anahtarı geçersiz veya eksik. ⚙️ Ayarlar\'dan anahtarı tekrar yapıştırın (console.anthropic.com\'dan kopyalayın, başında/sonunda boşluk olmasın).');
         let em = '';
         try { em = JSON.parse(body).error.message; } catch (e2) { em = 'HTTP ' + res.status; }
         throw new Error(em);

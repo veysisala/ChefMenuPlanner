@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   root: '.',
+  base: './',
   server: {
     proxy: {
       '/api/anthropic': {
@@ -12,9 +13,14 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/api\/anthropic/, ''),
         configure: (proxy) => {
           proxy.on('proxyReq', (proxyReq, req) => {
-            const key = (req.headers['x-client-api-key'] || req.headers['X-Client-Api-Key'] || process.env.VITE_ANTHROPIC_API_KEY || '').trim();
-            if (key) proxyReq.setHeader('x-api-key', key);
+            // Node.js gelen header isimlerini küçük harfe çevirir
+            const raw = (req.headers['x-client-api-key'] || process.env.VITE_ANTHROPIC_API_KEY || '').trim();
+            const key = raw.replace(/[^\x20-\x7E]/g, '').trim();
+            if (key) {
+              proxyReq.setHeader('x-api-key', key);
+            }
             proxyReq.removeHeader('x-client-api-key');
+            proxyReq.removeHeader('X-Client-Api-Key');
           });
         },
       },

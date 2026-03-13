@@ -15,8 +15,39 @@ if (typeof window !== 'undefined' && !window.storage) {
   };
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+class ErrorBoundary extends React.Component {
+  state = { error: null };
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+  componentDidCatch(error, info) {
+    console.error('App error:', error, info);
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ padding: 20, fontFamily: 'sans-serif', color: '#c00', maxWidth: 600 }}>
+          <h2>Uygulama hatası</h2>
+          <pre style={{ whiteSpace: 'pre-wrap', fontSize: 14 }}>
+            {this.state.error?.message || String(this.state.error)}
+          </pre>
+          <p>Tarayıcı konsolunda (F12) daha fazla ayrıntı görebilirsiniz.</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+const rootEl = document.getElementById('root');
+if (!rootEl) {
+  document.body.innerHTML = '<div style="padding:20px;font-family:sans-serif;color:#c00;">Hata: #root bulunamadı.</div>';
+} else {
+  ReactDOM.createRoot(rootEl).render(
+    <React.StrictMode>
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    </React.StrictMode>
+  );
+}
