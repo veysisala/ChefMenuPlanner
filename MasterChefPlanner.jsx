@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, memo } from "react";
-import { callAI, callAIStream, callAIText, callAIVision, getAnthropicHeaders, getApiKey, sanitizeApiKey, testApiKey, apiUrl, API_BASE } from "./src/api/anthropic.js";
+import { callAI, callAIStream, callAIText, callAIVision, getAnthropicHeaders, getApiKey, sanitizeApiKey, testApiKey, apiUrl, sleep, API_BASE } from "./src/api/anthropic.js";
 import { parseJSON } from "./src/utils/json.js";
 
 // ─── COLORS (CSS vars for theming) ───────────────────────────
@@ -2333,7 +2333,7 @@ function ChatTab(){
     var apiMsgs=messages.concat([um]).map(function(m){return {role:m.role,content:m.content};});
     callAIText("Sen Master Chef AI'sın. Türkçe konuşan, deneyimli ve samimi bir şefsin. Yemek, tarif, beslenme ve mutfak teknikleri konularında yardım et. Motive edici ol ve emojiler kullan.",apiMsgs,700)
       .then(function(r){setMessages(function(p){return p.concat([{role:"assistant",content:r}]);});})
-      .catch(function(e){setMessages(function(p){return p.concat([{role:"assistant",content:"⚠ Hata: "+e.message}]);});})
+      .catch(function(e){var msg=e.message||""; if(msg==="HTTP 404") msg="API proxy bulunamadı (404). Yerel için 'npm run dev' kullanın; canlıda Vercel'de api klasörünün dağıtıldığından emin olun."; setMessages(function(p){return p.concat([{role:"assistant",content:"⚠ Hata: "+msg}]);});})
       .finally(function(){setLoading(false);});
   }
   var QUICK=["🍝 Kolay makarna tarifi","🥗 Diyet için ne yemeliyim?","🥩 Biftek nasıl pişirilir?","🫙 Domates sosu püf noktası"];
@@ -2536,7 +2536,7 @@ function KurDetay({kur}){
       <div style={{display:"flex",gap:5,marginBottom:10,flexWrap:"wrap"}}>
         {protokoller.map(function(p){var on=acikBlok===p.id;return <button key={p.id} onClick={function(){setAcikBlok(p.id);}} style={{flex:1,minWidth:60,padding:"6px 4px",borderRadius:8,border:"1px solid "+(on?renk:"var(--border)"),background:on?"rgba(212,168,67,0.07)":"transparent",color:on?renk:C.dim,fontSize:10,fontWeight:on?700:400}}>{p.label}</button>;})}
       </div>
-      {protokoller.filter(function(p){return p.id===acikBlok;}).map(function(p){return <div key={p.id}>{(p.data||[]).map(function(adim,i){return <div key={i} style={{display:"flex",gap:10,padding:"8px 0",borderBottom:"1px solid rgba(255,255,255,0.04)"}}><div style={{width:22,height:22,borderRadius:"50%",background:"rgba(212,168,67,0.1)",border:"1.5px solid rgba(212,168,67,0.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:C.gold,flexShrink:0}}>{i+1}</div><div style={{fontSize:12,color:C.muted,lineHeight:1.6,paddingTop:2}}>{adim}</div></div>;})} </div>;})}
+      {protokoller.filter(function(p){return p.id===acikBlok;}).map(function(p){return <div key={p.id}>{(p.data||[]).map(function(adim,i){return <div key={i} style={{display:"flex",gap:12,padding:"10px 0",borderBottom:"1px solid rgba(255,255,255,0.04)"}}><div style={{width:28,height:28,borderRadius:"50%",background:"rgba(212,168,67,0.1)",border:"1.5px solid rgba(212,168,67,0.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:C.gold,flexShrink:0}}>{i+1}</div><div style={{fontSize:13,color:C.muted,lineHeight:1.6,paddingTop:2}}>{adim}</div></div>;})} </div>;})}
     </div>
     {kur.bitkiler&&kur.bitkiler.length>0&&<div style={{padding:"12px 16px",borderTop:"1px solid var(--border)"}}>
       <div style={{fontSize:9,color:C.green,textTransform:"uppercase",letterSpacing:"0.18em",fontWeight:700,marginBottom:8}}>🌿 Bitkisel Protokol</div>
@@ -2553,7 +2553,7 @@ function KurDetay({kur}){
     </div>}
     {kur.yasam_tarz&&kur.yasam_tarz.length>0&&<div style={{padding:"12px 16px",borderTop:"1px solid var(--border)"}}>
       <div style={{fontSize:9,color:"#5BA3D0",textTransform:"uppercase",letterSpacing:"0.18em",fontWeight:700,marginBottom:8}}>💫 Yaşam Tarzı</div>
-      {(kur.yasam_tarz||[]).map(function(y,i){return <div key={i} style={{display:"flex",gap:8,marginBottom:5}}><span style={{color:"#5BA3D0",flexShrink:0}}>○</span><span style={{fontSize:12,color:C.muted,lineHeight:1.5}}>{y}</span></div>;})}
+      {(kur.yasam_tarz||[]).map(function(y,i){return <div key={i} style={{display:"flex",gap:10,marginBottom:6}}><span style={{color:"#5BA3D0",flexShrink:0,fontSize:14}}>○</span><span style={{fontSize:13,color:C.muted,lineHeight:1.5}}>{y}</span></div>;})}
     </div>}
     <div style={{padding:"12px 16px",borderTop:"1px solid var(--border)",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
       {kur.beklenen_sonuc&&<div style={{padding:"9px 10px",background:"rgba(212,168,67,0.05)",borderRadius:9,border:"1px solid rgba(212,168,67,0.15)"}}><div style={{fontSize:9,color:C.gold,fontWeight:700,marginBottom:3}}>⏳ BEKLENEN SONUÇ</div><div style={{fontSize:11,color:C.muted,lineHeight:1.5}}>{kur.beklenen_sonuc}</div></div>}
@@ -2795,7 +2795,7 @@ function KurTab(){
           {k.kritik_kural&&<div style={{padding:"8px 14px 10px",borderTop:"1px solid var(--border)",background:"rgba(212,168,67,0.03)"}}><span style={{fontSize:11,color:C.gold,fontStyle:"italic"}}>🔑 "{k.kritik_kural}"</span></div>}
         </div>;})}
         {result.sinerji&&<div style={{padding:"12px 14px",background:"rgba(45,212,191,0.05)",borderRadius:12,border:"1px solid rgba(45,212,191,0.2)",marginBottom:10}}><div style={{fontSize:9,color:"#2DD4BF",textTransform:"uppercase",letterSpacing:"0.18em",fontWeight:700,marginBottom:6}}>🔗 Sinerji</div><div style={{fontSize:12,color:C.muted,lineHeight:1.7}}>{result.sinerji}</div></div>}
-        {(result.genel_oneriler||[]).length>0&&<div style={{padding:"12px 14px",background:"rgba(76,175,122,0.05)",borderRadius:12,border:"1px solid rgba(76,175,122,0.2)"}}><div style={{fontSize:9,color:C.green,textTransform:"uppercase",letterSpacing:"0.18em",fontWeight:700,marginBottom:8}}>🌿 Genel Öneriler</div>{result.genel_oneriler.map(function(o,i){return <div key={i} style={{display:"flex",gap:8,marginBottom:5}}><span style={{color:C.green,fontSize:12,flexShrink:0}}>•</span><span style={{fontSize:12,color:C.muted,lineHeight:1.5}}>{o}</span></div>;})}</div>}
+        {(result.genel_oneriler||[]).length>0&&<div style={{padding:"12px 14px",background:"rgba(76,175,122,0.05)",borderRadius:12,border:"1px solid rgba(76,175,122,0.2)"}}><div style={{fontSize:9,color:C.green,textTransform:"uppercase",letterSpacing:"0.18em",fontWeight:700,marginBottom:8}}>🌿 Genel Öneriler</div>{result.genel_oneriler.map(function(o,i){return <div key={i} style={{display:"flex",gap:10,marginBottom:6}}><span style={{color:C.green,fontSize:16,flexShrink:0,lineHeight:1.4}}>•</span><span style={{fontSize:13,color:C.muted,lineHeight:1.5}}>{o}</span></div>;})}</div>}
       </div>}
       <KurTakvimi kur={result} sorun={sorun} sure={sure}/>
     </div>
@@ -3101,7 +3101,7 @@ function KanTab(){
     <div style={{padding:"0 16px"}}>
       {!sonuc&&<div>
         <div style={{marginBottom:10,padding:"10px 13px",background:"rgba(91,163,208,0.06)",borderRadius:11,border:"1px solid rgba(91,163,208,0.2)"}}>
-          <div style={{fontSize:11,color:C.blue,lineHeight:1.6}}>🔬 Kan değerlerini gir, fonksiyonel tıp + Doğu tıbbı yorumu al. <strong>Optimal aralık</strong> baz alınır.</div>
+          <div style={{fontSize:11,color:C.blue,lineHeight:1.6}}>🔬 Kan değerlerini <strong>aşağıdaki kutulara</strong> gir, fonksiyonel tıp + Doğu tıbbı yorumu al. <strong>Optimal aralık</strong> baz alınır.</div>
         </div>
         {kayitlar.length>0&&<div style={{marginBottom:10,padding:"10px 13px",background:"var(--card)",borderRadius:10,border:"1px solid var(--border)"}}>
           <div style={{fontSize:9,color:C.gold,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.15em",marginBottom:7}}>📂 Önceki Analizler</div>
@@ -3110,17 +3110,20 @@ function KanTab(){
             <span style={{fontSize:11,color:C.gold}}>{Object.keys(k.degerler).length} değer →</span>
           </div>;})}
         </div>}
-        <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:14}}>
-          {KAN_DEGERLER.map(function(d){return <div key={d.id} style={{padding:"9px 12px",background:"var(--card)",borderRadius:10,border:"1px solid var(--border)",display:"flex",alignItems:"center",gap:10}}>
-            <div style={{flex:1}}>
-              <div style={{fontSize:11,fontWeight:600,color:C.cream}}>{d.label}</div>
-              <div style={{fontSize:9,color:C.dim}}>Optimal: {d.optimal}</div>
-            </div>
-            <input type="number" step="0.1" value={degerler[d.id]||""} onChange={function(e){setDeger(d.id,e.target.value);}} placeholder="?" style={{width:72,padding:"6px 8px",borderRadius:8,border:"1px solid "+(degerler[d.id]?"rgba(212,168,67,0.4)":"var(--border)"),background:"rgba(0,0,0,0.3)",color:C.cream,fontSize:13,textAlign:"center"}}/>
-          </div>;})}
+        <div style={{marginBottom:8}}>
+          <div style={{fontSize:10,color:C.gold,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:8}}>📝 Değerleri buraya girin</div>
+          <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:14}}>
+            {KAN_DEGERLER.map(function(d){return <div key={d.id} style={{padding:"12px 14px",background:"var(--card)",borderRadius:10,border:"1.5px solid "+(degerler[d.id]?"rgba(212,168,67,0.35)":"var(--border)"),display:"flex",alignItems:"center",gap:12}}>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:12,fontWeight:600,color:C.cream}}>{d.label}</div>
+                <div style={{fontSize:10,color:C.dim}}>Optimal: {d.optimal}</div>
+              </div>
+              <input type="number" step="0.1" inputMode="decimal" value={degerler[d.id]||""} onChange={function(e){setDeger(d.id,e.target.value);}} placeholder="Değer yaz" style={{width:88,minWidth:88,padding:"10px 10px",borderRadius:8,border:"1.5px solid "+(degerler[d.id]?"rgba(212,168,67,0.5)":"var(--border)"),background:"rgba(0,0,0,0.35)",color:C.cream,fontSize:14,textAlign:"center",fontWeight:600}}/>
+            </div>;})}
+          </div>
         </div>
         {error&&<div style={{padding:"10px",background:"rgba(224,82,82,0.08)",borderRadius:9,fontSize:12,color:C.red,marginBottom:10}}>⚠ {error}</div>}
-        <button onClick={analyze} disabled={!doluDegerler.length||loading} style={{width:"100%",padding:"14px",borderRadius:12,border:"none",background:doluDegerler.length?C.blue:"var(--border)",color:doluDegerler.length?"#fff":C.dim,fontSize:14,fontWeight:700}}>🔬 {doluDegerler.length?doluDegerler.length+" Değer Analiz Et":"Değer Gir"}</button>
+        <button onClick={analyze} disabled={!doluDegerler.length||loading} style={{width:"100%",padding:"14px",borderRadius:12,border:"none",background:doluDegerler.length?C.blue:"var(--border)",color:doluDegerler.length?"#fff":C.dim,fontSize:14,fontWeight:700}}>🔬 {doluDegerler.length?doluDegerler.length+" Değer Analiz Et":"En az bir değer girin"}</button>
       </div>}
       {sonuc&&<div>
         <div style={{display:"flex",gap:7,marginBottom:10}}>
@@ -3637,11 +3640,11 @@ function MenuYuklemeEkrani(props){
           var isActive=a.durum==="aktif";
           var isPending=a.durum==="bekliyor";
           return <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",borderRadius:10,background:isDone?"rgba(76,175,122,0.07)":isActive?"rgba(212,168,67,0.1)":"rgba(255,255,255,0.02)",border:"1px solid "+(isDone?"rgba(76,175,122,0.25)":isActive?"rgba(212,168,67,0.35)":"rgba(255,255,255,0.06)"),transition:"all 0.3s"}}>
-            <div style={{width:20,height:20,borderRadius:"50%",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",background:isDone?"rgba(76,175,122,0.2)":isActive?"rgba(212,168,67,0.15)":"rgba(255,255,255,0.04)",border:"1.5px solid "+(isDone?C.green:isActive?C.gold:"rgba(255,255,255,0.1)")}}>
-              {isDone?<span style={{fontSize:11,color:C.green}}>✓</span>:isActive?<Spinner size={10} color={C.gold}/>:<span style={{fontSize:8,color:"rgba(255,255,255,0.25)"}}>{i+1}</span>}
+            <div style={{width:24,height:24,borderRadius:"50%",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",background:isDone?"rgba(76,175,122,0.2)":isActive?"rgba(212,168,67,0.15)":"rgba(255,255,255,0.04)",border:"1.5px solid "+(isDone?C.green:isActive?C.gold:"rgba(255,255,255,0.1)")}}>
+              {isDone?<span style={{fontSize:12,color:C.green}}>✓</span>:isActive?<Spinner size={11} color={C.gold}/>:<span style={{fontSize:10,color:"rgba(255,255,255,0.25)"}}>{i+1}</span>}
             </div>
             <div style={{flex:1}}>
-              <div style={{fontSize:11,fontWeight:isActive?700:isDone?500:400,color:isDone?C.green:isActive?C.gold:"rgba(255,255,255,0.25)"}}>{a.label}</div>
+              <div style={{fontSize:12,fontWeight:isActive?700:isDone?500:400,color:isDone?C.green:isActive?C.gold:"rgba(255,255,255,0.25)"}}>{a.label}</div>
             </div>
           </div>;
         })}
@@ -3680,8 +3683,8 @@ function KurYuklemeEkrani(props){
           var isDone=a.durum==="tamam";
           var isActive=a.durum==="aktif";
           return <div key={i} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",borderRadius:11,background:isDone?"rgba(76,175,122,0.08)":isActive?"rgba(212,168,67,0.1)":"rgba(255,255,255,0.02)",border:"1px solid "+(isDone?"rgba(76,175,122,0.25)":isActive?"rgba(212,168,67,0.35)":"rgba(255,255,255,0.06)"),transition:"all 0.3s"}}>
-            <div style={{width:22,height:22,borderRadius:"50%",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",background:isDone?"rgba(76,175,122,0.2)":isActive?"rgba(212,168,67,0.15)":"rgba(255,255,255,0.05)",border:"1.5px solid "+(isDone?C.green:isActive?C.gold:"rgba(255,255,255,0.1)")}}>
-              {isDone?<span style={{fontSize:12,color:C.green}}>✓</span>:isActive?<Spinner size={11} color={C.gold}/>:<span style={{fontSize:9,color:"rgba(255,255,255,0.25)"}}>{i+1}</span>}
+            <div style={{width:26,height:26,borderRadius:"50%",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",background:isDone?"rgba(76,175,122,0.2)":isActive?"rgba(212,168,67,0.15)":"rgba(255,255,255,0.05)",border:"1.5px solid "+(isDone?C.green:isActive?C.gold:"rgba(255,255,255,0.1)")}}>
+              {isDone?<span style={{fontSize:13,color:C.green}}>✓</span>:isActive?<Spinner size={12} color={C.gold}/>:<span style={{fontSize:11,color:"rgba(255,255,255,0.25)"}}>{i+1}</span>}
             </div>
             <div style={{flex:1}}>
               <div style={{fontSize:12,fontWeight:isActive?700:isDone?600:400,color:isDone?C.green:isActive?C.gold:"rgba(255,255,255,0.25)"}}>{a.label}</div>

@@ -1,6 +1,6 @@
 import { parseJSON } from '../utils/json.js';
 
-function sleep(ms) {
+export function sleep(ms) {
   return new Promise(function (r) { setTimeout(r, ms); });
 }
 
@@ -135,6 +135,7 @@ export async function callAI(prompt, maxTok) {
       const body = await res.text();
       if (!res.ok) {
         if (res.status === 429) { await sleep(2500 * (att + 1)); continue; }
+        if (res.status === 404 && att < 2) { await sleep(1500 * (att + 1)); continue; }
         if (res.status === 401) throw new Error('Bu özellik şu an kullanılamıyor. Lütfen daha sonra tekrar deneyin.');
         let em = '';
         try { em = JSON.parse(body).error.message; } catch (e2) { em = 'HTTP ' + res.status; }
@@ -168,6 +169,7 @@ export async function callAIText(sysP, msgs, maxTok) {
       const body = await res.text();
       if (!res.ok) {
         if (res.status === 429) { await sleep(2500 * (att + 1)); continue; }
+        if (res.status === 404 && att < 2) { await sleep(1500 * (att + 1)); continue; }
         let em = '';
         try { em = JSON.parse(body).error.message; } catch (e2) { em = 'HTTP ' + res.status; }
         throw new Error(em);
