@@ -1,6 +1,6 @@
 /**
- * Vercel serverless proxy: /api/anthropic/* -> https://api.anthropic.com/*
- * API anahtarı: istek header'ı X-Client-Api-Key veya ortam değişkeni ANTHROPIC_API_KEY
+ * Vercel serverless proxy: POST /api/anthropic-proxy?path=v1/messages -> https://api.anthropic.com/v1/messages
+ * Frontend path'i query ile gönderir (404 önlenir). API anahtarı: ANTHROPIC_API_KEY (son kullanıcı görmez).
  */
 export const config = { maxDuration: 60 };
 
@@ -10,12 +10,12 @@ export default async function handler(req, res) {
     return;
   }
 
-  const path = Array.isArray(req.query.path) ? req.query.path.join('/') : (req.query.path || 'v1/messages');
+  const path = (req.query.path || 'v1/messages').replace(/^\/+/, '');
   const rawKey = (req.headers['x-client-api-key'] || process.env.ANTHROPIC_API_KEY || process.env.VITE_ANTHROPIC_API_KEY || '').trim();
   const apiKey = rawKey.replace(/[^\x20-\x7E]/g, '').trim();
 
   if (!apiKey) {
-    res.status(401).json({ error: 'API anahtarı gerekli. Vercel ortam değişkenlerine ANTHROPIC_API_KEY ekleyin veya uygulama Ayarlar\'dan girin.' });
+    res.status(401).json({ error: { message: 'Servis şu an kullanılamıyor. Lütfen daha sonra tekrar deneyin.' } });
     return;
   }
 

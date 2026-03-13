@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, memo } from "react";
-import { callAI, callAIStream, callAIText, callAIVision, getAnthropicHeaders, getApiKey, sanitizeApiKey, testApiKey, API_BASE } from "./src/api/anthropic.js";
+import { callAI, callAIStream, callAIText, callAIVision, getAnthropicHeaders, getApiKey, sanitizeApiKey, testApiKey, apiUrl, API_BASE } from "./src/api/anthropic.js";
 import { parseJSON } from "./src/utils/json.js";
 
 // ─── COLORS (CSS vars for theming) ───────────────────────────
@@ -1051,7 +1051,7 @@ function MenuTab(props){
   }
 
   async function generate(){
-    if (!getApiKey()){ setError("Menü oluşturmak için API anahtarı gerekli. Sağ üstten ⚙️ Ayarlar'a girip Anthropic API anahtarını ekleyin."); return; }
+    if (props.showApiSettings&&!getApiKey()){ setError("Menü oluşturmak için API anahtarı gerekli. Sağ üstten ⚙️ Ayarlar'a girip Anthropic API anahtarını ekleyin."); return; }
     if (cache.current[hKey]){setDays(cache.current[hKey]);setDetail(null);setActiveDay(0);return;}
     setLoading(true);setError(null);setDays(null);setDetail(null);
     // Build full checklist upfront
@@ -1106,7 +1106,7 @@ function MenuTab(props){
     setAlisverisLoading(true);
     var tumYemekler=days.flatMap(function(d){return (d.dishes||[]).map(function(x){return x.isim;});});
     try{
-      var res=await fetch(API_BASE+"/v1/messages",{method:"POST",headers:getAnthropicHeaders(),body:JSON.stringify({model:"claude-haiku-4-5-20251001",max_tokens:800,system:"Türkçe alışveriş listesi uzmanısın. Sadece JSON döndür.",messages:[{role:"user",content:"Bu yemekler için alışveriş listesi çıkar: "+tumYemekler.join(", ")+".\n\nJSON: {\"kategoriler\":[{\"kategori\":\"Sebze & Meyve\",\"malzemeler\":[\"malzeme1\",\"malzeme2\"]},{\"kategori\":\"Et & Protein\",\"malzemeler\":[]},{\"kategori\":\"Tahıl & Baklagil\",\"malzemeler\":[]},{\"kategori\":\"Süt & Yumurta\",\"malzemeler\":[]},{\"kategori\":\"Baharat & Sos\",\"malzemeler\":[]}]}"},{role:"assistant",content:"{"}]})});
+      var res=await fetch(apiUrl("v1/messages"),{method:"POST",headers:getAnthropicHeaders(),body:JSON.stringify({model:"claude-haiku-4-5-20251001",max_tokens:800,system:"Türkçe alışveriş listesi uzmanısın. Sadece JSON döndür.",messages:[{role:"user",content:"Bu yemekler için alışveriş listesi çıkar: "+tumYemekler.join(", ")+".\n\nJSON: {\"kategoriler\":[{\"kategori\":\"Sebze & Meyve\",\"malzemeler\":[\"malzeme1\",\"malzeme2\"]},{\"kategori\":\"Et & Protein\",\"malzemeler\":[]},{\"kategori\":\"Tahıl & Baklagil\",\"malzemeler\":[]},{\"kategori\":\"Süt & Yumurta\",\"malzemeler\":[]},{\"kategori\":\"Baharat & Sos\",\"malzemeler\":[]}]}"},{role:"assistant",content:"{"}]})});
       var body=await res.json();
       var raw="{"+(body.content||[]).map(function(b){return b.text||"";}).join("").trim();
       var parsed=parseJSON(raw);
@@ -2634,7 +2634,7 @@ function KurTab(){
         var sys="Sen "+ekolAdi+" uzmanısın. Sadece JSON döndür, başka hiçbir şey yazma.";
         // Minimal user prompt - fields with ? placeholder, no long example values
         var usr="Sorun:"+sorun+"\nHedef:"+hLabels+"\nProfil:"+profil+"\nSüre:"+sure+"gün\n\nJSON (her değer max 8 kelime, liste max 3 madde):\n{\"ekol\":\""+ekolAdi+"\",\"ekol_emoji\":\"?\",\"ekol_renk\":\""+ekolRenk+"\",\"sure\":\""+sure+" gün\",\"felsefe\":\"?\",\"protokol\":{\"sabah\":[\"?\"],\"ogle\":[\"?\"],\"aksam\":[\"?\"],\"gece\":[\"?\"]},\"beslenme\":{\"tuketime\":\"?\",\"kacinilacak\":\"?\"},\"bitkiler\":[{\"isim\":\"?\",\"doz\":\"?\",\"zaman\":\"?\"}],\"yasam_tarz\":[\"?\"],\"kritik_kural\":\"?\",\"dikkat\":\"?\"}";
-        var res=await fetch(API_BASE+"/v1/messages",{method:"POST",headers:getAnthropicHeaders(),body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1200,system:sys,messages:[{role:"user",content:usr},{role:"assistant",content:"{"}]})});
+        var res=await fetch(apiUrl("v1/messages"),{method:"POST",headers:getAnthropicHeaders(),body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1200,system:sys,messages:[{role:"user",content:usr},{role:"assistant",content:"{"}]})});
         if(!res.ok){var em=await res.text();throw new Error("API hata: "+res.status);}
         var body=await res.json();
         var rawText="{"+(body.content||[]).map(function(b){return b.text||"";}).join("").trim();
@@ -2655,7 +2655,7 @@ function KurTab(){
       }
       updAdimByLabel("Genel özet ve sinerji analizi","aktif");
       setLoadingEkol("Özet hazırlanıyor");
-      var sumRes=await fetch(API_BASE+"/v1/messages",{method:"POST",headers:getAnthropicHeaders(),body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:400,system:"Bütünleştirici hekim. Sadece JSON.",messages:[{role:"user",content:"Kürler:"+collected.map(function(k){return k.ekol;}).join(",")+". Sorun:"+sorun+"\nJSON:{\"baslik\":\"?\",\"ozet\":\"?\",\"genel_oneriler\":[\"?\",\"?\",\"?\"],\"sinerji\":\"?\"}"},{role:"assistant",content:"{"}]})});
+      var sumRes=await fetch(apiUrl("v1/messages"),{method:"POST",headers:getAnthropicHeaders(),body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:400,system:"Bütünleştirici hekim. Sadece JSON.",messages:[{role:"user",content:"Kürler:"+collected.map(function(k){return k.ekol;}).join(",")+". Sorun:"+sorun+"\nJSON:{\"baslik\":\"?\",\"ozet\":\"?\",\"genel_oneriler\":[\"?\",\"?\",\"?\"],\"sinerji\":\"?\"}"},{role:"assistant",content:"{"}]})});
       var sumBody=await sumRes.json();
       var sumRaw="{"+(sumBody.content||[]).map(function(b){return b.text||"";}).join("").trim();
       var sumP=parseJSON(sumRaw);
@@ -3714,6 +3714,7 @@ export default function App(){
   var [apiKeyInput,setApiKeyInput]=useState(typeof localStorage!=="undefined"?localStorage.getItem("anthropic_api_key")||"":"");
   var [apiKeyTestError,setApiKeyTestError]=useState("");
   var [apiKeyTestLoading,setApiKeyTestLoading]=useState(false);
+  var isDev=typeof window!=="undefined"&&(window.location.hostname==="localhost"||window.location.hostname.startsWith("127."));
 
   useEffect(function(){
     var s=sessionStorage.getItem("chef_u");
@@ -3764,15 +3765,15 @@ export default function App(){
     <style>{makeCSS(isDark)}</style>
     <ThemeToggle isDark={isDark} onToggle={toggleTheme} hasUser={true}/>
     <div style={{position:"fixed",top:10,right:10,zIndex:600,display:"flex",gap:4,alignItems:"center"}}>
-      <span title={hasApiKey?"API anahtarı ayarlı":"API anahtarı gerekli"} style={{fontSize:14,opacity:hasApiKey?1:0.9}}>{hasApiKey?"🔑":"⚠️"}</span>
-      <button onClick={function(){setApiKeyInput(typeof localStorage!=="undefined"?localStorage.getItem("anthropic_api_key")||"":"");setApiKeyTestError("");setShowSettings(true);}} title="Ayarlar" style={{padding:"4px 8px",borderRadius:50,background:"var(--card)",border:"1px solid var(--border)",fontSize:14,color:C.muted}}>⚙️</button>
+      {isDev&&<><span title={hasApiKey?"API anahtarı ayarlı":"API anahtarı gerekli"} style={{fontSize:14,opacity:hasApiKey?1:0.9}}>{hasApiKey?"🔑":"⚠️"}</span>
+      <button onClick={function(){setApiKeyInput(typeof localStorage!=="undefined"?localStorage.getItem("anthropic_api_key")||"":"");setApiKeyTestError("");setShowSettings(true);}} title="Ayarlar (sadece geliştirme)" style={{padding:"4px 8px",borderRadius:50,background:"var(--card)",border:"1px solid var(--border)",fontSize:14,color:C.muted}}>⚙️</button></>}
       <div style={{padding:"4px 9px",borderRadius:50,background:"var(--card)",border:"1px solid var(--border)",fontSize:11,color:C.muted}}>{isGuest?"👤":user}</div>
       <button onClick={logout} style={{padding:"4px 8px",borderRadius:50,background:"var(--card)",border:"1px solid var(--border)",fontSize:11,color:C.muted}}>✕</button>
     </div>
-    {showSettings&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:700,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={function(e){if(e.target===e.currentTarget)setShowSettings(false);}}>
+    {isDev&&showSettings&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:700,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={function(e){if(e.target===e.currentTarget)setShowSettings(false);}}>
       <div className="up" style={{background:"var(--card)",border:"1px solid var(--border)",borderRadius:16,padding:22,maxWidth:400,width:"100%"}} onClick={function(e){e.stopPropagation();}}>
-        <div style={{fontSize:16,fontWeight:700,color:C.cream,marginBottom:8}}>⚙️ Ayarlar</div>
-        <div style={{fontSize:12,color:C.muted,marginBottom:12}}>Anthropic API anahtarı (Menü/Şef/Kür AI özellikleri için)</div>
+        <div style={{fontSize:16,fontWeight:700,color:C.cream,marginBottom:8}}>⚙️ Ayarlar (geliştirme)</div>
+        <div style={{fontSize:12,color:C.muted,marginBottom:12}}>Anthropic API anahtarı — sadece localhost. Canlı sitede Vercel ortam değişkeni kullanılır.</div>
         <input type="password" placeholder="sk-ant-..." value={apiKeyInput} onChange={function(e){setApiKeyInput(e.target.value);setApiKeyTestError("");}} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:"1px solid var(--border)",background:"var(--card2)",color:C.cream,fontSize:13,marginBottom:12}}/>
         {apiKeyTestError&&<div style={{marginBottom:10,padding:"8px 12px",borderRadius:9,background:"rgba(224,82,82,0.1)",border:"1px solid rgba(224,82,82,0.3)",fontSize:12,color:C.red}}>⚠ {apiKeyTestError}</div>}
         <div style={{display:"flex",gap:8,justifyContent:"flex-end",flexWrap:"wrap"}}>
@@ -3780,11 +3781,11 @@ export default function App(){
           <button onClick={saveApiKey} style={{padding:"8px 14px",borderRadius:9,border:"1px solid var(--border)",background:"var(--card2)",color:C.muted,fontSize:12}}>Sadece Kaydet</button>
           <button onClick={testAndSaveApiKey} disabled={apiKeyTestLoading} style={{padding:"8px 14px",borderRadius:9,border:"1.5px solid "+C.gold,background:"linear-gradient(135deg,rgba(212,168,67,0.2),rgba(212,168,67,0.06))",color:C.goldL,fontSize:12,fontWeight:600}}>{apiKeyTestLoading?"Test ediliyor…":"🧪 Test Et & Kaydet"}</button>
         </div>
-        {hasApiKey&&!apiKeyTestError?<div style={{marginTop:10,fontSize:11,color:C.green}}>✓ API anahtarı ayarlı</div>:!hasApiKey&&!apiKeyTestError?<div style={{marginTop:10,fontSize:11,color:C.muted}}>Öneri: Önce "Test Et & Kaydet" ile anahtarı doğrulayın.</div>:null}
+        {hasApiKey&&!apiKeyTestError?<div style={{marginTop:10,fontSize:11,color:C.green}}>✓ API anahtarı ayarlı (sadece bu cihaz)</div>:!hasApiKey&&!apiKeyTestError?<div style={{marginTop:10,fontSize:11,color:C.muted}}>Vercel canlı sitede anahtar görünmez; ortam değişkeni kullanılır.</div>:null}
       </div>
     </div>}
     <div style={{paddingBottom:68}}>
-      {activeTab==="menu"&&<MenuTab favorites={favorites} lists={lists} onToggleFav={toggleFav} onAddToList={addToList} isGuest={isGuest} user={user}/>}
+      {activeTab==="menu"&&<MenuTab favorites={favorites} lists={lists} onToggleFav={toggleFav} onAddToList={addToList} isGuest={isGuest} user={user} showApiSettings={isDev}/>}
       {activeTab==="puf"&&<PufTab/>}
       {activeTab==="rehber"&&<RehberTab/>}
       {activeTab==="saglik"&&<SaglikTab/>}

@@ -5,7 +5,13 @@ function sleep(ms) {
 }
 
 const USE_PROXY = typeof window !== 'undefined';
-export const API_BASE = USE_PROXY ? '/api/anthropic' : 'https://api.anthropic.com';
+export const API_BASE = USE_PROXY ? '/api/anthropic-proxy' : 'https://api.anthropic.com';
+
+/** Proxy kullanırken path query ile gider (Vercel 404 önleme); doğrudan API'de path URL'de. */
+export function apiUrl(path) {
+  const p = (path || 'v1/messages').replace(/^\/+/, '');
+  return USE_PROXY ? API_BASE + '?path=' + encodeURIComponent(p) : API_BASE + '/' + p;
+}
 
 /** Header'da kullanılacak API anahtarını temizler (gizli karakterler kaldırılır). Dışa aktarılır; Ayarlar'da kaydetmeden önce kullanın. */
 export function sanitizeApiKey(str) {
@@ -54,7 +60,7 @@ export async function testApiKey(keyOrEmpty) {
     'X-Client-Api-Key': key,
   };
   try {
-    const res = await fetch(API_BASE + '/v1/messages', {
+    const res = await fetch(apiUrl('v1/messages'), {
       method: 'POST',
       headers,
       body: JSON.stringify({
@@ -77,7 +83,7 @@ export async function testApiKey(keyOrEmpty) {
 }
 
 export async function callAIStream(sysP, userP, onChunk, maxTok) {
-  const res = await fetch(API_BASE + '/v1/messages', {
+  const res = await fetch(apiUrl('v1/messages'), {
     method: 'POST',
     headers: getAnthropicHeaders(),
     body: JSON.stringify({
@@ -117,7 +123,7 @@ export async function callAIStream(sysP, userP, onChunk, maxTok) {
 export async function callAI(prompt, maxTok) {
   for (let att = 0; att < 3; att++) {
     try {
-      const res = await fetch(API_BASE + '/v1/messages', {
+      const res = await fetch(apiUrl('v1/messages'), {
         method: 'POST',
         headers: getAnthropicHeaders(),
         body: JSON.stringify({
@@ -129,7 +135,7 @@ export async function callAI(prompt, maxTok) {
       const body = await res.text();
       if (!res.ok) {
         if (res.status === 429) { await sleep(2500 * (att + 1)); continue; }
-        if (res.status === 401) throw new Error('API anahtarı geçersiz veya eksik. ⚙️ Ayarlar\'dan anahtarı tekrar yapıştırın (console.anthropic.com\'dan kopyalayın, başında/sonunda boşluk olmasın).');
+        if (res.status === 401) throw new Error('Bu özellik şu an kullanılamıyor. Lütfen daha sonra tekrar deneyin.');
         let em = '';
         try { em = JSON.parse(body).error.message; } catch (e2) { em = 'HTTP ' + res.status; }
         throw new Error(em);
@@ -149,7 +155,7 @@ export async function callAIText(sysP, msgs, maxTok) {
   for (let att = 0; att < 3; att++) {
     try {
       const allMsgs = msgs.concat([{ role: 'assistant', content: '{' }]);
-      const res = await fetch(API_BASE + '/v1/messages', {
+      const res = await fetch(apiUrl('v1/messages'), {
         method: 'POST',
         headers: getAnthropicHeaders(),
         body: JSON.stringify({
@@ -180,7 +186,7 @@ export async function callAIText(sysP, msgs, maxTok) {
 export async function callAIVision(b64, mtype, prompt, maxTok) {
   for (let att = 0; att < 3; att++) {
     try {
-      const res = await fetch(API_BASE + '/v1/messages', {
+      const res = await fetch(apiUrl('v1/messages'), {
         method: 'POST',
         headers: getAnthropicHeaders(),
         body: JSON.stringify({
