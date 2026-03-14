@@ -55,7 +55,14 @@ function aiCacheSet(key,data){return stSet("aicache:"+key,{data:data,ts:Date.now
 function aiCacheClear(key){return stSet("aicache:"+key,null);}
 
 function makeCSS(isDark) {
-  var base="@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap');\n:root{--bg:"+( isDark?"#0A0A0A":"#F5EFE0")+";--card:"+( isDark?"#141414":"#FFFFFF")+";--card2:"+( isDark?"#1A1A1A":"#F0EBE3")+";--border:"+( isDark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.1)")+";--cream:"+( isDark?"#F5EFE0":"#1A1A1A")+";--muted:"+( isDark?"#666":"#888")+";--dim:"+( isDark?"#333":"#CCC")+"}\n*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}\nbody{background:var(--bg);color:var(--cream);font-family:'Inter',sans-serif}\n::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:"+( isDark?"#333":"#ccc")+";border-radius:5px}\ninput,textarea,button{font-family:'Inter',sans-serif}\ninput::placeholder,textarea::placeholder{color:var(--muted)}\nbutton{cursor:pointer}\n@keyframes spin{to{transform:rotate(360deg)}}\n@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}\n@keyframes pulse{0%,100%{opacity:0.4}50%{opacity:1}}\n@keyframes shimmer{0%{background-position:-800px 0}100%{background-position:800px 0}}\n.up{animation:fadeUp 0.35s ease both}\n.sk{background:linear-gradient(90deg,"+( isDark?"rgba(255,255,255,0.03) 25%,rgba(255,255,255,0.07) 50%,rgba(255,255,255,0.03) 75%":"rgba(0,0,0,0.03) 25%,rgba(0,0,0,0.07) 50%,rgba(0,0,0,0.03) 75%")+");background-size:800px 100%;animation:shimmer 1.6s infinite linear;border-radius:12px}\nbutton:active{transform:scale(0.97);opacity:0.9}";
+  var bg=isDark?"#0A0A0A":"#F7F4EF";
+  var card=isDark?"#141414":"#FFFFFF";
+  var card2=isDark?"#1A1A1A":"#F0EBE3";
+  var border=isDark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.08)";
+  var text=isDark?"#F5EFE0":"#1A1A1A";
+  var muted=isDark?"#888":"#6B7280";
+  var dim=isDark?"#444":"#9CA3AF";
+  var base="@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap');\n:root{--bg:"+bg+";--card:"+card+";--card2:"+card2+";--border:"+border+";--cream:"+text+";--text:"+text+";--muted:"+muted+";--dim:"+dim+"}\n*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}\nbody{background:var(--bg);color:var(--cream);font-family:'Inter',sans-serif;font-size:15px;line-height:1.5}\n::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:"+(isDark?"#333":"#d1d5db")+";border-radius:6px}\ninput,textarea,button{font-family:'Inter',sans-serif;font-size:15px}\ninput::placeholder,textarea::placeholder{color:var(--muted)}\nbutton{cursor:pointer}\n@keyframes spin{to{transform:rotate(360deg)}}\n@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}\n@keyframes pulse{0%,100%{opacity:0.4}50%{opacity:1}}\n@keyframes shimmer{0%{background-position:-800px 0}100%{background-position:800px 0}}\n.up{animation:fadeUp 0.35s ease both}\n.sk{background:linear-gradient(90deg,"+(isDark?"rgba(255,255,255,0.03) 25%,rgba(255,255,255,0.07) 50%,rgba(255,255,255,0.03) 75%":"rgba(0,0,0,0.03) 25%,rgba(0,0,0,0.07) 50%,rgba(0,0,0,0.03) 75%")+");background-size:800px 100%;animation:shimmer 1.6s infinite linear;border-radius:12px}\nbutton:active{transform:scale(0.97);opacity:0.9}";
   var print="@media print{.no-print{display:none!important}.print-only{display:block!important}.menu-print-area{background:#fff!important;color:#111!important;padding:20px!important;max-width:100%!important}.menu-print-area *{color:#111!important;border-color:rgba(0,0,0,0.15)!important}}";
   return base+"\n"+print;
 }
@@ -148,7 +155,7 @@ function Spinner(props){var size=props.size||16,color=props.color||C.gold;return
 function SH(props){return <div style={{marginBottom:12}}><div style={{fontSize:11,letterSpacing:"0.28em",textTransform:"uppercase",color:C.gold,fontWeight:700,marginBottom:4}}>{props.label}</div>{props.sub?<div style={{fontSize:12,color:C.muted,lineHeight:1.5}}>{props.sub}</div>:null}</div>;}
 function ErrBox(props){if (!props.msg) return null;return <div style={{padding:"11px 15px",borderRadius:11,border:"1px solid rgba(224,82,82,0.3)",background:"rgba(224,82,82,0.07)",color:C.red,fontSize:13,marginBottom:14,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}><span style={{flex:1,minWidth:0}}>⚠ {props.msg}</span>{props.onRetry&&<button onClick={props.onRetry} style={{flexShrink:0,padding:"5px 12px",borderRadius:8,border:"1px solid "+C.gold,background:C.goldDim,color:C.goldL,fontSize:12,fontWeight:600}}>Tekrar dene</button>}</div>;}
 function GoldBtn(props){var ld=props.loading;return <button onClick={props.onClick} disabled={props.disabled||ld} style={{width:"100%",padding:"14px",borderRadius:13,border:"2px solid rgba(212,168,67,"+(ld?"0.15":"0.5")+")",background:ld?"rgba(212,168,67,0.03)":"linear-gradient(135deg,rgba(212,168,67,0.22),rgba(212,168,67,0.08))",color:ld?"#444":C.goldL,fontSize:14,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>{props.children}</button>;}
-function TabHeader(props){var col=props.col||C.gold;return <div style={{background:"var(--card)",padding:"20px 20px 16px",marginBottom:14,borderBottom:"1px solid "+col+"33"}}><div style={{fontSize:10,letterSpacing:"0.35em",color:col,textTransform:"uppercase",fontWeight:700,marginBottom:6}}>✦ {props.sub} ✦</div><h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,fontWeight:700,color:C.cream,marginBottom:4}}>{props.title}</h2><p style={{fontSize:12,color:C.muted}}>{props.desc}</p></div>;}
+function TabHeader(props){var col=props.col||C.gold;return <div style={{background:"var(--card)",padding:"24px 20px 20px",marginBottom:16,borderBottom:"1px solid var(--border)"}}><div style={{fontSize:11,letterSpacing:"0.2em",color:"var(--muted)",textTransform:"uppercase",fontWeight:600,marginBottom:8}}>{props.sub}</div><h2 style={{fontFamily:"'Playfair Display',serif",fontSize:26,fontWeight:700,color:"var(--cream)",marginBottom:props.desc?6:0,lineHeight:1.25}}>{props.title}</h2>{props.desc?<p style={{fontSize:14,color:"var(--muted)",lineHeight:1.5}}>{props.desc}</p>:null}</div>;}
 
 function ThemeToggle(props){
   return <button onClick={props.onToggle} title={props.isDark?"Aydınlık Mod":"Karanlık Mod"} aria-label={props.isDark?"Aydınlık moda geç":"Karanlık moda geç"} style={{position:"fixed",top:10,right:props.hasUser?85:10,zIndex:601,width:34,height:34,borderRadius:50,background:"var(--card)",border:"1px solid var(--border)",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",color:C.muted}}>
@@ -1209,14 +1216,17 @@ function MenuTab(props){
 
   if (menuSub==="buzdolabi") return <div style={{paddingBottom:60}}>{subBar}<div style={{padding:"14px 16px 0"}}><BuzdolabiPanel/></div></div>;
 
-  if (step===1||step===2) return <div style={{paddingBottom:60}}>
+  if (step===1||step===2) return <div style={{paddingBottom:78}}>
     {loading&&<MenuYuklemeEkrani adimlar={menuAdimlar}/>}
     {subBar}
-    <div style={{padding:"14px 16px 0"}}>
-      <div style={{display:"flex",gap:6,marginBottom:16}}>
-        {[["1","Öğün & Mutfak"],["2","Detaylar"]].map(function(s,i){var ac=step===i+1;return <div key={i} onClick={function(){setStep(i+1);}} style={{display:"flex",alignItems:"center",gap:7,padding:"6px 12px",borderRadius:50,background:ac?C.goldDim:"transparent",border:"1.5px solid "+(ac?C.gold:"var(--border)"),cursor:"pointer"}}>
-          <span style={{width:18,height:18,borderRadius:"50%",background:ac?C.gold:"var(--dim)",color:ac?"#000":"var(--muted)",fontSize:10,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center"}}>{s[0]}</span>
-          <span style={{fontSize:12,color:ac?C.cream:C.muted}}>{s[1]}</span>
+    <div style={{padding:"18px 20px 0"}}>
+      <div style={{fontSize:12,color:"var(--muted)",textTransform:"uppercase",letterSpacing:"0.15em",fontWeight:600,marginBottom:6}}>ADIM {step} / 2</div>
+      <h1 style={{fontFamily:"'Playfair Display',serif",fontSize:28,fontWeight:700,color:"var(--cream)",marginBottom:6,lineHeight:1.2}}>Menü Oluştur</h1>
+      <p style={{fontSize:15,color:"var(--muted)",marginBottom:20}}>{step===1?"Öğün ve mutfak seçimi":"Kişi, süre ve tercihler"}</p>
+      <div style={{display:"flex",gap:8,marginBottom:20}}>
+        {[["1","Öğün & Mutfak"],["2","Detaylar"]].map(function(s,i){var ac=step===i+1;return <div key={i} onClick={function(){setStep(i+1);}} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 14px",borderRadius:50,background:ac?C.goldDim:"transparent",border:"1.5px solid "+(ac?C.gold:"var(--border)"),cursor:"pointer"}}>
+          <span style={{width:22,height:22,borderRadius:"50%",background:ac?C.gold:"var(--dim)",color:ac?"#000":"var(--muted)",fontSize:12,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center"}}>{s[0]}</span>
+          <span style={{fontSize:14,fontWeight:ac?600:400,color:ac?"var(--cream)":"var(--muted)"}}>{s[1]}</span>
         </div>;})}
       </div>
       {step===1&&<div className="up">
@@ -1236,8 +1246,8 @@ function MenuTab(props){
           </button>;})}
         </div>
         <SH label="Mutfak" sub="Boş = Türk mutfağı"/>
-        {CUISINES.map(function(gr){return <div key={gr.group} style={{marginBottom:14}}>
-          <div style={{fontSize:10,color:C.muted,fontWeight:600,marginBottom:6}}>{gr.group}</div>
+        {CUISINES.map(function(gr){return <div key={gr.group} style={{marginBottom:18}}>
+          <div style={{fontSize:11,color:"var(--muted)",fontWeight:600,marginBottom:10,textTransform:"uppercase",letterSpacing:"0.1em"}}>MUTFAK — {gr.group.toUpperCase()}</div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(80px,1fr))",gap:5}}>
             {gr.items.map(function(c){var on=selC.indexOf(c.id)>-1;return <button key={c.id} onClick={function(){setSelC(function(p){return p.indexOf(c.id)>-1?p.filter(function(x){return x!==c.id;}):p.concat([c.id]);});reset();}} style={{borderRadius:9,padding:"8px 5px",border:"1.5px solid "+(on?C.gold:"var(--border)"),background:on?C.goldDim:"var(--card)",display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
               <span style={{fontSize:18}}>{CE[c.id]||"🍴"}</span>
@@ -2748,10 +2758,14 @@ function KurTab(){
   var [acikEkol,setAcikEkol]=useState(null);
   var [savedKurler,setSavedKurler]=useState([]);
   var [showSaved,setShowSaved]=useState(false);
+  var kurSonucRef=useRef(null);
 
   useEffect(function(){
     stGet("kurler").then(function(d){if(d) setSavedKurler(d);});
   },[]);
+  useEffect(function(){
+    if(step===3&&result&&kurSonucRef.current){kurSonucRef.current.scrollIntoView({behavior:"smooth",block:"start"});}
+  },[step,result]);
 
   var secHedefler=Object.keys(hedefler).filter(function(k){return hedefler[k];});
   var secEkoller=Object.keys(ekoller).filter(function(k){return ekoller[k];});
@@ -2820,7 +2834,12 @@ function KurTab(){
       }
       updAdimByLabel("Genel özet ve sinerji analizi","aktif");
       setLoadingEkol("Özet hazırlanıyor");
-      var sumRes=await fetch(apiUrl("v1/messages"),{method:"POST",headers:getAnthropicHeaders(),body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:400,system:"Bütünleştirici hekim. Sadece JSON.",messages:[{role:"user",content:"Kürler:"+collected.map(function(k){return k.ekol;}).join(",")+". Sorun:"+sorun+"\nJSON:{\"baslik\":\"?\",\"ozet\":\"?\",\"genel_oneriler\":[\"?\",\"?\",\"?\"],\"sinerji\":\"?\"}"},{role:"assistant",content:"{"}]})});
+      var cokluKur=collected.length>1;
+      var sumPrompt="Kürler:"+collected.map(function(k){return k.ekol;}).join(",")+". Sorun:"+sorun+"\nJSON:{\"baslik\":\"?\",\"ozet\":\"?\",\"genel_oneriler\":[\"?\",\"?\",\"?\"],\"sinerji\":\"?\"}";
+      if(cokluKur){
+        sumPrompt="Aşağıdaki "+collected.length+" farklı tıp ekolünden kür programları var. Hepsinin ortak özelliklerini ve her ekolün kendine özgü farklarını çıkar. Kürler:"+collected.map(function(k){return k.ekol;}).join(", ")+". Sorun:"+sorun+"\nJSON (Türkçe, kısa maddeler): {\"baslik\":\"?\",\"ozet\":\"?\",\"genel_oneriler\":[\"?\",\"?\",\"?\"],\"sinerji\":\"?\",\"ortak_ozellikler\":[\"?\",\"?\",\"?\"],\"farklar\":[{\"ekol\":\"ekol adı\",\"ozellikler\":[\"?\",\"?\"]}]}";
+      }
+      var sumRes=await fetch(apiUrl("v1/messages"),{method:"POST",headers:getAnthropicHeaders(),body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:cokluKur?700:400,system:"Bütünleştirici hekim. Sadece JSON.",messages:[{role:"user",content:sumPrompt},{role:"assistant",content:"{"}]})});
       var sumBody=await sumRes.json();
       var sumRaw="{"+(sumBody.content||[]).map(function(b){return b.text||"";}).join("").trim();
       var sumP=parseJSON(sumRaw);
@@ -2942,9 +2961,15 @@ function KurTab(){
   </div>;
 
   // ── STEP 3: SONUÇLAR ────────────────────────────────────────
-  if(step===3&&result) return <div style={{paddingBottom:68}}>
+  if(step===3&&result) return <div ref={kurSonucRef} style={{paddingBottom:68}}>
     <TabHeader sub="Şifa Kürü" title={result.baslik||"Kür Programın"} isDark={true}/>
     <div style={{padding:"0 16px"}}>
+      {/* Belirgin "Kürünüz hazır" banner */}
+      <div style={{padding:"20px 18px",marginBottom:16,borderRadius:16,background:"linear-gradient(135deg,rgba(212,168,67,0.25),rgba(212,168,67,0.08))",border:"2px solid rgba(212,168,67,0.5)",textAlign:"center",boxShadow:"0 4px 20px rgba(212,168,67,0.15)"}}>
+        <div style={{fontSize:36,marginBottom:6}}>🎉</div>
+        <div style={{fontSize:18,fontWeight:800,color:C.gold,fontFamily:"'Playfair Display',serif",marginBottom:4}}>Kürünüz Hazır!</div>
+        <div style={{fontSize:12,color:C.muted}}>{(result.kurler||[]).length} ekol protokolü aşağıda. Özet ve takvimle birlikte uygulayabilirsiniz.</div>
+      </div>
       <div style={{display:"flex",gap:7,marginBottom:12}}>
         <button onClick={function(){setStep(2);setResult(null);setAcikEkol(null);}} style={{padding:"7px 12px",borderRadius:9,border:"1px solid var(--border)",background:"var(--card)",color:C.muted,fontSize:11}}>← Yeni Kür</button>
         <div style={{flex:1,padding:"7px 12px",borderRadius:9,background:"rgba(212,168,67,0.06)",border:"1px solid rgba(212,168,67,0.15)",fontSize:11,color:C.gold,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{sorun.slice(0,50)}{sorun.length>50?"...":""}</div>
@@ -2962,6 +2987,18 @@ function KurTab(){
         </div>;})}
         {result.sinerji&&<div style={{padding:"12px 14px",background:"rgba(45,212,191,0.05)",borderRadius:12,border:"1px solid rgba(45,212,191,0.2)",marginBottom:10}}><div style={{fontSize:9,color:"#2DD4BF",textTransform:"uppercase",letterSpacing:"0.18em",fontWeight:700,marginBottom:6}}>🔗 Sinerji</div><div style={{fontSize:12,color:C.muted,lineHeight:1.7}}>{result.sinerji}</div></div>}
         {(result.genel_oneriler||[]).length>0&&<div style={{padding:"12px 14px",background:"rgba(76,175,122,0.05)",borderRadius:12,border:"1px solid rgba(76,175,122,0.2)"}}><div style={{fontSize:9,color:C.green,textTransform:"uppercase",letterSpacing:"0.18em",fontWeight:700,marginBottom:8}}>🌿 Genel Öneriler</div>{result.genel_oneriler.map(function(o,i){return <div key={i} style={{display:"flex",gap:10,marginBottom:6}}><span style={{color:C.green,fontSize:16,flexShrink:0,lineHeight:1.4}}>•</span><span style={{fontSize:13,color:C.muted,lineHeight:1.5}}>{o}</span></div>;})}</div>}
+        {/* Çoklu kür seçildiyse: ortak özellikler ve farklar özeti */}
+        {(result.kurler||[]).length>1&&(result.ortak_ozellikler||result.farklar)&&<div style={{marginTop:16,padding:"16px 14px",background:"linear-gradient(135deg,rgba(212,168,67,0.08),rgba(91,163,208,0.06))",borderRadius:14,border:"1px solid rgba(212,168,67,0.25)",marginBottom:14}}>
+          <div style={{fontSize:12,fontWeight:800,color:C.gold,fontFamily:"'Playfair Display',serif",marginBottom:12,display:"flex",alignItems:"center",gap:6}}>📋 Tüm Kürler Özeti</div>
+          {(result.ortak_ozellikler||[]).length>0&&<div style={{marginBottom:14}}>
+            <div style={{fontSize:10,color:C.green,textTransform:"uppercase",letterSpacing:"0.12em",fontWeight:700,marginBottom:8}}>✓ Ortak Özellikler</div>
+            {(result.ortak_ozellikler||[]).map(function(o,i){return <div key={i} style={{display:"flex",gap:8,marginBottom:5}}><span style={{color:C.green,flexShrink:0}}>•</span><span style={{fontSize:12,color:C.muted,lineHeight:1.5}}>{o}</span></div>;})}
+          </div>}
+          {(result.farklar||[]).length>0&&<div>
+            <div style={{fontSize:10,color:C.blue,textTransform:"uppercase",letterSpacing:"0.12em",fontWeight:700,marginBottom:8}}>↔ Ekol Bazlı Farklar</div>
+            {(result.farklar||[]).map(function(f,i){var ekolAdi=f.ekol||("Ekol "+(i+1));var oz=f.ozellikler||f.ozellikler_listesi||[];if(typeof oz==="string")oz=[oz];return <div key={i} style={{marginBottom:10,padding:"10px 12px",background:"rgba(255,255,255,0.03)",borderRadius:10,border:"1px solid var(--border)"}}><div style={{fontSize:11,fontWeight:700,color:C.blue,marginBottom:5}}>{ekolAdi}</div>{oz.map(function(x,xi){return <div key={xi} style={{fontSize:11,color:C.muted,lineHeight:1.5,marginBottom:2}}>· {x}</div>;})}</div>;})}
+          </div>}
+        </div>}
       </div>}
       <KurTakvimi kur={result} sorun={sorun} sure={sure}/>
     </div>
@@ -3569,7 +3606,19 @@ function KurTakvimi(props){
 // AKADEMİ TAB
 // ══════════════════════════════════════════════════════════════
 const AKADEMI_OKULLAR=[
-  {id:"tibbi_nebevi",label:"Tıbbı Nebevi",emoji:"☪️",renk:"#D4A843",aciklama:"Hz. Peygamber'in (s.a.v.) tıp mirası; dua, bitki ve yaşam sünnetleri",
+  {id:"ibni_sina",label:"İbn-i Sina Tıbbı",emoji:"📜",renk:"#D4A843",aciklama:"El-Kanun fi't-Tıbb; dört hümor, mizaç teorisi ve gıda-ilaç bütünlüğü",
+   konular:[
+    {id:"sina_humor",baslik:"Dört Hümor Teorisi",ozet:"Kan, balgam, sarı safra, kara safra — dengenin ve hastalığın temeli"},
+    {id:"sina_mizac",baslik:"Mizaç (Temperament)",ozet:"Sıcak-Kuru, Sıcak-Nemli, Soğuk-Nemli, Soğuk-Kuru ve beslenme"},
+    {id:"sina_gida_ilac",baslik:"Gıda İlaçtır",ozet:"Doğru besin, doğru zamanda — tıbbın birinci aracı"},
+    {id:"sina_beslenme_tedavi",baslik:"Beslenme Tedavisi",ozet:"Önce diyet, sonra bitki, sonra ilaç — sıra prensibi"},
+    {id:"sina_mevsim",baslik:"Mevsim ve Mizaç",ozet:"Mevsimsel beslenme ve mizaç uyumu"},
+    {id:"sina_sindirim",baslik:"Sindirim Ateşi",ozet:"Hazım kuvveti ve mide dostu yaşam"},
+    {id:"sina_uyku",baslik:"Uyku ve Dinlenme",ozet:"İbn-i Sina'ya göre uyku düzeni ve sağlık"},
+    {id:"sina_bitkiler",baslik:"Şifalı Bitkiler",ozet:"El-Kanun'dan bitkisel reçeteler ve kullanım"},
+   ]
+  },
+  {id:"tibbi_nebevi",label:"Tıbbı Nebevi",emoji:"☪️",renk:"#4CAF7A",aciklama:"Hz. Peygamber'in (s.a.v.) tıp mirası; dua, bitki ve yaşam sünnetleri",
    konular:[
     {id:"tibbi_nebevi_bal",baslik:"Balın Şifa Gücü",ozet:"Kur'an ve Sünnet'te balın önemi ve modern bilimin doğrulamaları"},
     {id:"tibbi_nebevi_hicama",baslik:"Hicama (Kupa Tedavisi)",ozet:"Nebevi tıbbın en önemli uygulamalarından hacamatın faydaları ve zamanı"},
@@ -3639,6 +3688,18 @@ const AKADEMI_OKULLAR=[
     {id:"bitki_detoks",baslik:"Detoks Bitkileri",ozet:"Deve dikeni, karahindiba, ısırgan otu ve karaciğer şifası"},
     {id:"bitki_cay",baslik:"Şifalı Çay Formülleri",ozet:"Sabah, akşam, detoks ve bağışıklık çay blendleri"},
     {id:"bitki_baharat",baslik:"Şifalı Baharatlar",ozet:"Zerdecal, karanfil, tarçın, kişniş - mutfak eczanesi"},
+   ]
+  },
+  {id:"gunluk_pratik",label:"Günlük Pratik",emoji:"🌅",renk:"#F59E0B",aciklama:"Sabah rutini, mevsim geçişi, stres ve uyku — hemen uygulanabilir adımlar",
+   konular:[
+    {id:"pratik_sabah",baslik:"Sabah Rutini (Dinacharya)",ozet:"Uyanış, su, hareket ve ilk öğün — güne doğru başlangıç"},
+    {id:"pratik_mevsim",baslik:"Mevsim Geçişlerinde Beslenme",ozet:"İlkbahar, yaz, sonbahar, kış — bedeni mevsime uyumlama"},
+    {id:"pratik_stres",baslik:"Stres Azaltma ve Nefes",ozet:"Günlük stresi azaltan nefes ve beslenme teknikleri"},
+    {id:"pratik_uyku",baslik:"Uyku Hijyeni",ozet:"Uyku kalitesini artıran alışkanlıklar ve bitkiler"},
+    {id:"pratik_su",baslik:"Su ve Hidrasyon",ozet:"Günlük su ihtiyacı, zamanlama ve bitkili sular"},
+    {id:"pratik_aralik",baslik:"Aralıklı Oruç Pratiği",ozet:"16:8, 14:10 ve haftalık oruç — uygulama rehberi"},
+    {id:"pratik_öğun",baslik:"Öğün Zamanlaması",ozet:"Sindirim ateşi ve öğün sıklığı — ne zaman yemeli"},
+    {id:"pratik_mevsim_bitki",baslik:"Mevsimsel Bitki Çayları",ozet:"Her mevsime uygun çay ve infüzyon önerileri"},
    ]
   },
 ];
@@ -3715,64 +3776,67 @@ function AkademiTab(){
     </div>
   </div>;}
 
-  return <div style={{paddingBottom:68}}>
-    <TabHeader sub="Sağlık Akademisi" title="Bilgi Merkezi" isDark={true}/>
-    <div style={{padding:"0 16px"}}>
+  return <div style={{paddingBottom:78}}>
+    <TabHeader sub="SAĞLIK AKADEMİSİ" title="Bilgi, okuma ve pratik."/>
+    <div style={{padding:"0 20px"}}>
       {/* Arama */}
-      <div style={{position:"relative",marginBottom:14}}>
-        <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:14,color:C.muted}}>🔍</span>
-        <input value={aramaMetni} onChange={function(e){setAramaMetni(e.target.value);}} placeholder="Konu ara… (bal, dosha, omega-3…)" style={{width:"100%",padding:"10px 12px 10px 36px",borderRadius:11,border:"1px solid var(--border)",background:"var(--card)",color:"var(--text)",fontSize:13,boxSizing:"border-box",outline:"none"}}/>
+      <div style={{position:"relative",marginBottom:18}}>
+        <span style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",fontSize:16,color:"var(--muted)"}}>🔍</span>
+        <input value={aramaMetni} onChange={function(e){setAramaMetni(e.target.value);}} placeholder="Konu ara... dosha, omega-3, hicama..." style={{width:"100%",padding:"12px 14px 12px 42px",borderRadius:12,border:"1px solid var(--border)",background:"var(--card)",color:"var(--cream)",fontSize:15,boxSizing:"border-box",outline:"none"}}/>
       </div>
 
+      {/* Alıntı */}
+      {aramaMetni.length<=1&&<div style={{padding:"14px 16px 14px 18px",marginBottom:20,borderLeft:"4px solid var(--cream)",background:"var(--card2)",borderRadius:0,fontSize:15,color:"var(--cream)",lineHeight:1.6}}>
+        "Bedenini tanıyan, hastalığın değil sağlığın efendisi olur." — İbn-i Sina
+      </div>}
+
       {/* Arama sonuçları */}
-      {aramaMetni.length>1&&<div style={{marginBottom:16}}>
-        <div style={{fontSize:10,color:C.muted,marginBottom:8,textTransform:"uppercase",letterSpacing:"0.15em",fontWeight:700}}>{aramaSonuclari.length} Sonuç</div>
-        {aramaSonuclari.length===0?<div style={{textAlign:"center",padding:"20px",color:C.muted,fontSize:12}}>Sonuç bulunamadı</div>:
-        aramaSonuclari.map(function(sr,i){return <div key={i} onClick={function(){konuYukle(sr.okul,sr.konu);}} style={{padding:"11px 13px",background:"var(--card)",borderRadius:11,border:"1px solid var(--border)",marginBottom:7,cursor:"pointer"}}>
-          <div style={{fontSize:10,color:sr.okul.renk,marginBottom:3,fontWeight:600}}>{sr.okul.emoji} {sr.okul.label}</div>
-          <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:2}}>{sr.konu.baslik}</div>
-          <div style={{fontSize:11,color:C.muted}}>{sr.konu.ozet}</div>
+      {aramaMetni.length>1&&<div style={{marginBottom:20}}>
+        <div style={{fontSize:11,color:"var(--muted)",marginBottom:10,textTransform:"uppercase",letterSpacing:"0.15em",fontWeight:600}}>{aramaSonuclari.length} Sonuç</div>
+        {aramaSonuclari.length===0?<div style={{textAlign:"center",padding:24,color:"var(--muted)",fontSize:14}}>Sonuç bulunamadı</div>:
+        aramaSonuclari.map(function(sr,i){return <div key={i} onClick={function(){konuYukle(sr.okul,sr.konu);}} style={{padding:"14px 16px",background:"var(--card)",borderRadius:12,border:"1px solid var(--border)",marginBottom:8,cursor:"pointer"}}>
+          <div style={{fontSize:11,color:sr.okul.renk,marginBottom:4,fontWeight:600}}>{sr.okul.emoji} {sr.okul.label}</div>
+          <div style={{fontSize:16,fontWeight:700,color:"var(--cream)",fontFamily:"'Playfair Display',serif",marginBottom:4}}>{sr.konu.baslik}</div>
+          <div style={{fontSize:13,color:"var(--muted)"}}>{sr.konu.ozet}</div>
         </div>;})
         }
       </div>}
 
       {/* Favoriler */}
-      {aramaMetni.length<=1&&favKonular.length>0&&<div style={{marginBottom:16}}>
-        <div style={{fontSize:10,color:C.gold,marginBottom:8,textTransform:"uppercase",letterSpacing:"0.15em",fontWeight:700}}>❤️ Favorilerim</div>
-        <div style={{display:"flex",flexWrap:"wrap",gap:7}}>
+      {aramaMetni.length<=1&&favKonular.length>0&&<div style={{marginBottom:20}}>
+        <div style={{fontSize:11,color:C.gold,marginBottom:10,textTransform:"uppercase",letterSpacing:"0.15em",fontWeight:600}}>❤️ Favorilerim</div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
           {AKADEMI_OKULLAR.flatMap(function(o){return o.konular.map(function(k){return {okul:o,konu:k};});})
            .filter(function(sr){return favKonular.includes(sr.konu.id);})
-           .map(function(sr,i){return <div key={i} onClick={function(){konuYukle(sr.okul,sr.konu);}} style={{padding:"7px 12px",borderRadius:50,background:"rgba(212,168,67,0.08)",border:"1px solid rgba(212,168,67,0.2)",color:C.gold,fontSize:11,cursor:"pointer"}}>{sr.konu.baslik}</div>;})
+           .map(function(sr,i){return <div key={i} onClick={function(){konuYukle(sr.okul,sr.konu);}} style={{padding:"8px 14px",borderRadius:50,background:"rgba(212,168,67,0.08)",border:"1px solid rgba(212,168,67,0.2)",color:C.gold,fontSize:12,cursor:"pointer"}}>{sr.konu.baslik}</div>;})
           }
         </div>
       </div>}
 
-      {/* Okul kartları */}
-      {aramaMetni.length<=1&&AKADEMI_OKULLAR.map(function(okul,oi){
-        return <div key={oi} style={{marginBottom:16}}>
-          <div style={{padding:"14px 16px",background:"linear-gradient(135deg,"+okul.renk+"12,var(--card))",borderRadius:14,border:"1px solid var(--border)",marginBottom:8}}>
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
-              <span style={{fontSize:26}}>{okul.emoji}</span>
-              <div>
-                <div style={{fontSize:15,fontWeight:700,color:okul.renk,fontFamily:"'Playfair Display',serif"}}>{okul.label}</div>
-                <div style={{fontSize:11,color:C.muted,lineHeight:1.5}}>{okul.aciklama}</div>
+      {/* OKULLAR — numaralı liste */}
+      {aramaMetni.length<=1&&<div style={{marginBottom:24}}>
+        <div style={{fontSize:11,color:"var(--muted)",marginBottom:14,textTransform:"uppercase",letterSpacing:"0.18em",fontWeight:600}}>OKULLAR</div>
+        {AKADEMI_OKULLAR.map(function(okul,oi){
+          var num=String(oi+1).padStart(2,"0");
+          var keywords=okul.konular.slice(0,3).map(function(k){return k.baslik.split(" ")[0];}).join(", ")+" · "+okul.konular.length+" konu";
+          return <div key={oi} style={{borderBottom:"1px solid var(--border)",paddingBottom:16,paddingTop:oi===0?0:16,marginBottom:oi<AKADEMI_OKULLAR.length-1?0:0}}>
+            <div onClick={function(){konuYukle(okul,okul.konular[0]);}} style={{display:"flex",alignItems:"flex-start",gap:14,cursor:"pointer"}}>
+              <div style={{fontSize:14,fontWeight:500,color:"var(--muted)",flexShrink:0,minWidth:28}}>{num}</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:18,fontWeight:700,color:"var(--cream)",fontFamily:"'Playfair Display',serif",marginBottom:4,lineHeight:1.3}}>{okul.label}</div>
+                <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.5}}>{keywords}</div>
               </div>
+              <span style={{fontSize:18,color:"var(--muted)",flexShrink:0}}>›</span>
             </div>
-          </div>
-          <div style={{display:"flex",flexDirection:"column",gap:5}}>
-            {okul.konular.map(function(konu,ki){var isFav=favKonular.includes(konu.id);return <div key={ki} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 13px",background:"var(--card)",borderRadius:11,border:"1px solid var(--border)",cursor:"pointer"}} onClick={function(){konuYukle(okul,konu);}}>
-              <div style={{flex:1}}>
-                <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:2}}>{konu.baslik}</div>
-                <div style={{fontSize:11,color:C.muted,lineHeight:1.4}}>{konu.ozet}</div>
-              </div>
-              <div style={{display:"flex",alignItems:"center",gap:6}}>
-                <button onClick={function(e){e.stopPropagation();toggleFavKonu(konu.id);}} style={{background:"transparent",border:"none",fontSize:14,cursor:"pointer",padding:2}}>{isFav?"❤️":"🤍"}</button>
-                <span style={{fontSize:16,color:C.muted}}>›</span>
-              </div>
-            </div>;})}
-          </div>
-        </div>;
-      })}
+            <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:10,marginLeft:42}}>
+              {okul.konular.map(function(konu,ki){var isFav=favKonular.includes(konu.id);return <button key={ki} onClick={function(e){e.stopPropagation();konuYukle(okul,konu);}} style={{padding:"6px 12px",borderRadius:8,border:"1px solid var(--border)",background:"var(--card)",color:"var(--cream)",fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+                <span style={{fontSize:12}}>{isFav?"❤️":"🤍"}</span>
+                <span>{konu.baslik}</span>
+              </button>;})}
+            </div>
+          </div>;
+        })}
+      </div>}
     </div>
   </div>;
 }
@@ -3878,7 +3942,7 @@ export default function App(){
   var [lists,setLists]=useState([]);
   var [ready,setReady]=useState(false);
   var [activeTab,setActiveTab]=useState("menu");
-  var [isDark,setIsDark]=useState(true);
+  var [isDark,setIsDark]=useState(false);
   var [showSettings,setShowSettings]=useState(false);
   var [showChangelog,setShowChangelog]=useState(false);
   var [showMoreTabs,setShowMoreTabs]=useState(false);
@@ -3913,7 +3977,7 @@ export default function App(){
     var s=sessionStorage.getItem("chef_u");
     var g=sessionStorage.getItem("chef_guest");
     var th=sessionStorage.getItem("chef_theme");
-    if (th==="light") setIsDark(false);
+    if (th==="light") setIsDark(false); else if (th==="dark") setIsDark(true);
     if (g){setUser("misafir");setIsGuest(true);setReady(true);}
     else if (s){doLogin(s);}
     else{setReady(true);}
@@ -3942,7 +4006,7 @@ export default function App(){
     setLists(u);await stSet("lst:"+user,u);
   }
 
-  if (!ready) return <div style={{minHeight:"100vh",background:"#0A0A0A",display:"flex",alignItems:"center",justifyContent:"center"}}><style>{makeCSS(true)}</style><Spinner size={28}/></div>;
+  if (!ready) return <div style={{minHeight:"100vh",background:"#F7F4EF",display:"flex",alignItems:"center",justifyContent:"center"}}><style>{makeCSS(false)}</style><Spinner size={28}/></div>;
   if (!user) return <div style={{minHeight:"100vh",background:"var(--bg)"}}><style>{makeCSS(isDark)}</style><Auth onLogin={function(u,g){if(g) loginGuest();else doLogin(u);}}/></div>;
 
   function saveApiKey(){ if(typeof localStorage!=="undefined"){ var clean=sanitizeApiKey(apiKeyInput); localStorage.setItem("anthropic_api_key",clean); setApiKeyInput(clean); } setShowSettings(false); setApiKeyTestError(""); }
@@ -4028,16 +4092,16 @@ export default function App(){
       {activeTab==="chat"&&<ChatTab/>}
       {activeTab==="hikaye"&&<HikayeTab/>}
     </div>
-    <div className="no-print" style={{position:"fixed",bottom:0,left:0,right:0,background:isDark?"rgba(10,10,10,0.97)":"rgba(245,239,224,0.97)",backdropFilter:"blur(10px)",borderTop:"1px solid var(--border)",display:"flex",overflowX:"auto",WebkitOverflowScrolling:"touch",scrollbarWidth:"none",zIndex:500,padding:"4px 0 6px"}}>
-      {BOTTOM_TABS.slice(0,BOTTOM_TABS_VISIBLE).map(function(t){var ac=activeTab===t.id;return <button key={t.id} onClick={function(){setActiveTab(t.id);setShowMoreTabs(false);}} style={{flex:"0 0 auto",minWidth:54,display:"flex",flexDirection:"column",alignItems:"center",gap:1,padding:"3px 1px",background:"transparent",border:"none",color:ac?C.goldL:C.muted}}>
-        <span style={{fontSize:ac?19:15,transition:"font-size 0.15s"}}>{t.icon}</span>
-        <span style={{fontSize:7,fontWeight:ac?700:400}}>{t.label}</span>
-        <span style={{width:12,height:2,borderRadius:2,background:ac?C.gold:"transparent",marginTop:1}}/>
+    <div className="no-print" style={{position:"fixed",bottom:0,left:0,right:0,background:isDark?"rgba(10,10,10,0.98)":"rgba(255,255,255,0.98)",backdropFilter:"blur(12px)",borderTop:"1px solid var(--border)",display:"flex",overflowX:"auto",WebkitOverflowScrolling:"touch",scrollbarWidth:"none",zIndex:500,padding:"8px 0 10px",alignItems:"center",justifyContent:"center"}}>
+      {BOTTOM_TABS.slice(0,BOTTOM_TABS_VISIBLE).map(function(t){var ac=activeTab===t.id;return <button key={t.id} onClick={function(){setActiveTab(t.id);setShowMoreTabs(false);}} style={{flex:"0 0 auto",minWidth:56,display:"flex",flexDirection:"column",alignItems:"center",gap:4,padding:"4px 2px",background:"transparent",border:"none",color:ac?(isDark?C.goldL:"#1A1A1A"):"var(--muted)"}}>
+        <span style={{fontSize:ac?20:18,transition:"font-size 0.15s"}}>{t.icon}</span>
+        <span style={{fontSize:11,fontWeight:ac?600:400}}>{t.label}</span>
+        <span style={{width:16,height:2,borderRadius:2,background:ac?C.gold:"transparent",marginTop:0}}/>
       </button>;})}
-      <button onClick={function(){setShowMoreTabs(!showMoreTabs);}} style={{flex:"0 0 auto",minWidth:54,display:"flex",flexDirection:"column",alignItems:"center",gap:1,padding:"3px 1px",background:showMoreTabs?C.goldDim:"transparent",border:"none",color:BOTTOM_TABS.slice(BOTTOM_TABS_VISIBLE).some(function(t){return activeTab===t.id;})?C.goldL:C.muted}} title="Daha fazla sekme">
-        <span style={{fontSize:18}}>⋯</span>
-        <span style={{fontSize:7,fontWeight:400}}>Daha fazla</span>
-        <span style={{width:12,height:2,borderRadius:2,background:BOTTOM_TABS.slice(BOTTOM_TABS_VISIBLE).some(function(t){return activeTab===t.id;})?C.gold:"transparent",marginTop:1}}/>
+      <button onClick={function(){setShowMoreTabs(!showMoreTabs);}} style={{flex:"0 0 auto",minWidth:56,display:"flex",flexDirection:"column",alignItems:"center",gap:4,padding:"4px 2px",background:showMoreTabs?"var(--card2)":"transparent",border:"none",color:BOTTOM_TABS.slice(BOTTOM_TABS_VISIBLE).some(function(t){return activeTab===t.id;})?(isDark?C.goldL:"#1A1A1A"):"var(--muted)"}} title="Daha fazla sekme">
+        <span style={{fontSize:20}}>⋯</span>
+        <span style={{fontSize:11,fontWeight:400}}>Daha fazla</span>
+        <span style={{width:16,height:2,borderRadius:2,background:BOTTOM_TABS.slice(BOTTOM_TABS_VISIBLE).some(function(t){return activeTab===t.id;})?C.gold:"transparent",marginTop:0}}/>
       </button>
     </div>
     {showMoreTabs&&<div style={{position:"fixed",inset:0,zIndex:502,background:"rgba(0,0,0,0.5)"}} onClick={function(){setShowMoreTabs(false);}}>
