@@ -1,16 +1,7 @@
 import { useState, useEffect, useRef, memo } from "react";
 import { callAI, callAIStream, callAIText, callAIVision, getAnthropicHeaders, getApiKey, sanitizeApiKey, testApiKey, apiUrl, sleep, API_BASE } from "./src/api/anthropic.js";
 import { parseJSON } from "./src/utils/json.js";
-
-// ─── COLORS (CSS vars for theming) ───────────────────────────
-const C = {
-  gold:"#D4A843",goldL:"#F0C96A",goldDim:"rgba(212,168,67,0.15)",
-  borderG:"rgba(212,168,67,0.25)",
-  red:"#E05252",blue:"#5BA3D0",green:"#4CAF7A",purple:"#9B7FD4",
-  teal:"#2DD4BF",orange:"#F97316",pink:"#EC4899",
-  bg:"var(--bg)",card:"var(--card)",card2:"var(--card2)",
-  border:"var(--border)",cream:"var(--cream)",muted:"var(--muted)",dim:"var(--dim)",
-};
+import { C, BOTTOM_TABS, BOTTOM_TABS_VISIBLE, APP_VERSION, CHANGELOG } from "./src/constants.js";
 
 const FOOD_IMGS = {
   kahvalti:{emoji:"🥐",bg:"linear-gradient(135deg,#3D2B1F,#5C3D2E)"},
@@ -57,10 +48,16 @@ const SAGLIK_SYS=[
 ];
 const SMOOTHIE_GOALS=[{id:"enerji",label:"Enerji",emoji:"⚡",col:C.orange},{id:"detoks",label:"Detoks",emoji:"🌿",col:C.green},{id:"kilo",label:"Kilo",emoji:"⚖️",col:C.blue},{id:"guzellik",label:"Güzellik",emoji:"✨",col:C.pink},{id:"bagirsak",label:"Bağırsak",emoji:"🦠",col:C.teal},{id:"uyku",label:"Uyku",emoji:"🌙",col:C.purple}];
 const REHBER_TABS=[{id:"saklama",label:"Saklama",emoji:"📦"},{id:"sunum",label:"Sunum",emoji:"🎨"},{id:"eslesme",label:"Eşleşme",emoji:"🍷"},{id:"temizlik",label:"Temizlik",emoji:"🧹"},{id:"stok",label:"Stok",emoji:"🛒"}];
-const BOTTOM_TABS=[{id:"menu",icon:"🍽️",label:"Menü"},{id:"kur",icon:"🍵",label:"Kür"},{id:"kan",icon:"🩸",label:"Kan"},{id:"vucut",icon:"🫀",label:"Vücut"},{id:"oruc",icon:"🌙",label:"Oruç"},{id:"nefes",icon:"🫁",label:"Nefes"},{id:"saglik",icon:"🌿",label:"Sağlık"},{id:"smoothie",icon:"🥤",label:"Smoothie"},{id:"foto",icon:"📸",label:"Analiz"},{id:"takip",icon:"📊",label:"Takip"},{id:"favoriler",icon:"❤️",label:"Favoriler"},{id:"chat",icon:"💬",label:"Şef"},{id:"akademi",icon:"📚",label:"Akademi"}];
+
+var CACHE_TTL_MS=7*24*60*60*1000;
+function aiCacheGet(key){return stGet("aicache:"+key).then(function(r){if(!r||!r.ts)return null;if(Date.now()-r.ts>CACHE_TTL_MS)return null;return r.data;});}
+function aiCacheSet(key,data){return stSet("aicache:"+key,{data:data,ts:Date.now()});}
+function aiCacheClear(key){return stSet("aicache:"+key,null);}
 
 function makeCSS(isDark) {
-  return "@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap');\n:root{--bg:"+( isDark?"#0A0A0A":"#F5EFE0")+";--card:"+( isDark?"#141414":"#FFFFFF")+";--card2:"+( isDark?"#1A1A1A":"#F0EBE3")+";--border:"+( isDark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.1)")+";--cream:"+( isDark?"#F5EFE0":"#1A1A1A")+";--muted:"+( isDark?"#666":"#888")+";--dim:"+( isDark?"#333":"#CCC")+"}\n*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}\nbody{background:var(--bg);color:var(--cream);font-family:'Inter',sans-serif}\n::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:"+( isDark?"#333":"#ccc")+";border-radius:5px}\ninput,textarea,button{font-family:'Inter',sans-serif}\ninput::placeholder,textarea::placeholder{color:var(--muted)}\nbutton{cursor:pointer}\n@keyframes spin{to{transform:rotate(360deg)}}\n@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}\n@keyframes pulse{0%,100%{opacity:0.4}50%{opacity:1}}\n@keyframes shimmer{0%{background-position:-800px 0}100%{background-position:800px 0}}\n.up{animation:fadeUp 0.35s ease both}\n.sk{background:linear-gradient(90deg,"+( isDark?"rgba(255,255,255,0.03) 25%,rgba(255,255,255,0.07) 50%,rgba(255,255,255,0.03) 75%":"rgba(0,0,0,0.03) 25%,rgba(0,0,0,0.07) 50%,rgba(0,0,0,0.03) 75%")+");background-size:800px 100%;animation:shimmer 1.6s infinite linear;border-radius:12px}\nbutton:active{transform:scale(0.97);opacity:0.9}";
+  var base="@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap');\n:root{--bg:"+( isDark?"#0A0A0A":"#F5EFE0")+";--card:"+( isDark?"#141414":"#FFFFFF")+";--card2:"+( isDark?"#1A1A1A":"#F0EBE3")+";--border:"+( isDark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.1)")+";--cream:"+( isDark?"#F5EFE0":"#1A1A1A")+";--muted:"+( isDark?"#666":"#888")+";--dim:"+( isDark?"#333":"#CCC")+"}\n*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}\nbody{background:var(--bg);color:var(--cream);font-family:'Inter',sans-serif}\n::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:"+( isDark?"#333":"#ccc")+";border-radius:5px}\ninput,textarea,button{font-family:'Inter',sans-serif}\ninput::placeholder,textarea::placeholder{color:var(--muted)}\nbutton{cursor:pointer}\n@keyframes spin{to{transform:rotate(360deg)}}\n@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}\n@keyframes pulse{0%,100%{opacity:0.4}50%{opacity:1}}\n@keyframes shimmer{0%{background-position:-800px 0}100%{background-position:800px 0}}\n.up{animation:fadeUp 0.35s ease both}\n.sk{background:linear-gradient(90deg,"+( isDark?"rgba(255,255,255,0.03) 25%,rgba(255,255,255,0.07) 50%,rgba(255,255,255,0.03) 75%":"rgba(0,0,0,0.03) 25%,rgba(0,0,0,0.07) 50%,rgba(0,0,0,0.03) 75%")+");background-size:800px 100%;animation:shimmer 1.6s infinite linear;border-radius:12px}\nbutton:active{transform:scale(0.97);opacity:0.9}";
+  var print="@media print{.no-print{display:none!important}.print-only{display:block!important}.menu-print-area{background:#fff!important;color:#111!important;padding:20px!important;max-width:100%!important}.menu-print-area *{color:#111!important;border-color:rgba(0,0,0,0.15)!important}}";
+  return base+"\n"+print;
 }
 
 // ─── UTILS ───────────────────────────────────────────────────
@@ -149,12 +146,12 @@ async function shareMenu(text,title){
 // ─── SMALL COMPONENTS ────────────────────────────────────────
 function Spinner(props){var size=props.size||16,color=props.color||C.gold;return <span style={{display:"inline-block",width:size,height:size,flexShrink:0,borderRadius:"50%",border:"2px solid "+color+"33",borderTopColor:color,animation:"spin 0.7s linear infinite"}}/>;}
 function SH(props){return <div style={{marginBottom:12}}><div style={{fontSize:11,letterSpacing:"0.28em",textTransform:"uppercase",color:C.gold,fontWeight:700,marginBottom:4}}>{props.label}</div>{props.sub?<div style={{fontSize:12,color:C.muted,lineHeight:1.5}}>{props.sub}</div>:null}</div>;}
-function ErrBox(props){if (!props.msg) return null;return <div style={{padding:"11px 15px",borderRadius:11,border:"1px solid rgba(224,82,82,0.3)",background:"rgba(224,82,82,0.07)",color:C.red,fontSize:13,marginBottom:14}}>⚠ {props.msg}</div>;}
-function GoldBtn(props){var ld=props.loading;return <button onClick={props.onClick} disabled={props.disabled} style={{width:"100%",padding:"14px",borderRadius:13,border:"2px solid rgba(212,168,67,"+(ld?"0.15":"0.5")+")",background:ld?"rgba(212,168,67,0.03)":"linear-gradient(135deg,rgba(212,168,67,0.22),rgba(212,168,67,0.08))",color:ld?"#444":C.goldL,fontSize:14,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>{props.children}</button>;}
+function ErrBox(props){if (!props.msg) return null;return <div style={{padding:"11px 15px",borderRadius:11,border:"1px solid rgba(224,82,82,0.3)",background:"rgba(224,82,82,0.07)",color:C.red,fontSize:13,marginBottom:14,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}><span style={{flex:1,minWidth:0}}>⚠ {props.msg}</span>{props.onRetry&&<button onClick={props.onRetry} style={{flexShrink:0,padding:"5px 12px",borderRadius:8,border:"1px solid "+C.gold,background:C.goldDim,color:C.goldL,fontSize:12,fontWeight:600}}>Tekrar dene</button>}</div>;}
+function GoldBtn(props){var ld=props.loading;return <button onClick={props.onClick} disabled={props.disabled||ld} style={{width:"100%",padding:"14px",borderRadius:13,border:"2px solid rgba(212,168,67,"+(ld?"0.15":"0.5")+")",background:ld?"rgba(212,168,67,0.03)":"linear-gradient(135deg,rgba(212,168,67,0.22),rgba(212,168,67,0.08))",color:ld?"#444":C.goldL,fontSize:14,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>{props.children}</button>;}
 function TabHeader(props){var col=props.col||C.gold;return <div style={{background:"var(--card)",padding:"20px 20px 16px",marginBottom:14,borderBottom:"1px solid "+col+"33"}}><div style={{fontSize:10,letterSpacing:"0.35em",color:col,textTransform:"uppercase",fontWeight:700,marginBottom:6}}>✦ {props.sub} ✦</div><h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,fontWeight:700,color:C.cream,marginBottom:4}}>{props.title}</h2><p style={{fontSize:12,color:C.muted}}>{props.desc}</p></div>;}
 
 function ThemeToggle(props){
-  return <button onClick={props.onToggle} title={props.isDark?"Aydınlık Mod":"Karanlık Mod"} style={{position:"fixed",top:10,right:props.hasUser?85:10,zIndex:601,width:34,height:34,borderRadius:50,background:"var(--card)",border:"1px solid var(--border)",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",color:C.muted}}>
+  return <button onClick={props.onToggle} title={props.isDark?"Aydınlık Mod":"Karanlık Mod"} aria-label={props.isDark?"Aydınlık moda geç":"Karanlık moda geç"} style={{position:"fixed",top:10,right:props.hasUser?85:10,zIndex:601,width:34,height:34,borderRadius:50,background:"var(--card)",border:"1px solid var(--border)",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",color:C.muted}}>
     {props.isDark?"☀️":"🌙"}
   </button>;
 }
@@ -402,12 +399,16 @@ function PisirmeModu(props){
     </div>
   </div>;
 }
+function scaleMiktar(str,factor){if(!str||factor===1)return str;var m=String(str).match(/^([0-9]+[.,]?[0-9]*)\s*(.*)$/);if(!m)return str;var num=parseFloat(m[1].replace(",","."));if(isNaN(num))return str;var rest=m[2]||"";var scaled=Math.round(num*factor*100)/100;return scaled+(rest?" "+rest:"");}
 var DetailPanel=memo(function DetailPanel(props){
-  var d=props.data,col=props.col;
+  var d=props.data,col=props.col,baseKisi=props.baseKisi||2;
   var [speaking,setSpeaking]=useState(false);
   var [pisirme,setPisirme]=useState(false);
+  var [porsiyonGoster,setPorsiyonGoster]=useState(baseKisi);
+  var scale=porsiyonGoster/baseKisi;
   function doSpeak(){
-    var t=d.isim+". Malzemeler: "+(d.malzemeler||[]).map(function(m){return m.miktar+" "+m.isim;}).join(", ")+". Hazırlanış: "+(d.adimlar||[]).join(". ");
+    var mals=(d.malzemeler||[]).map(function(m){return scaleMiktar(m.miktar,scale)+" "+m.isim;});
+    var t=d.isim+". Malzemeler: "+mals.join(", ")+". Hazırlanış: "+(d.adimlar||[]).join(". ");
     speak(t); setSpeaking(true);
   }
   function doStop(){ stopSpeech(); setSpeaking(false); }
@@ -416,6 +417,8 @@ var DetailPanel=memo(function DetailPanel(props){
       {d.sure?<span style={{padding:"4px 11px",borderRadius:50,background:"rgba(91,163,208,0.12)",color:C.blue,fontSize:11}}>⏱ {d.sure}</span>:null}
       {d.porsiyon?<span style={{padding:"4px 11px",borderRadius:50,background:"var(--card)",color:C.muted,fontSize:11}}>🍽 {d.porsiyon}</span>:null}
       {d.kalori?<span style={{padding:"4px 11px",borderRadius:50,background:"rgba(155,127,212,0.12)",color:C.purple,fontSize:11}}>🔥 {d.kalori}</span>:null}
+      <span style={{fontSize:10,color:C.muted,marginRight:4}}>Porsiyon:</span>
+      <div style={{display:"flex",gap:3}}>{[2,3,4,5,6].map(function(n){return <button key={n} onClick={function(){setPorsiyonGoster(n);}} style={{padding:"3px 8px",borderRadius:6,border:"1px solid "+(porsiyonGoster===n?C.gold:"var(--border)"),background:porsiyonGoster===n?C.goldDim:"transparent",color:porsiyonGoster===n?C.goldL:C.muted,fontSize:11}}>{n}</button>;})}</div>
       <div style={{flex:1}}/>
       <button onClick={speaking?doStop:doSpeak} style={{padding:"5px 12px",borderRadius:50,fontSize:11,border:"1.5px solid "+(speaking?"rgba(224,82,82,0.4)":"rgba(212,168,67,0.3)"),background:speaking?"rgba(224,82,82,0.08)":C.goldDim,color:speaking?C.red:C.goldL,display:"flex",alignItems:"center",gap:5}}>
         {speaking?"⏹ Durdur":"🔊 Sesli Oku"}
@@ -425,8 +428,8 @@ var DetailPanel=memo(function DetailPanel(props){
     {pisirme&&<PisirmeModu data={d} col={col} onClose={function(){setPisirme(false);}}/>}
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
       <div>
-        <div style={{fontSize:10,letterSpacing:"0.2em",textTransform:"uppercase",color:col,fontWeight:700,marginBottom:9}}>Malzemeler</div>
-        {(d.malzemeler||[]).map(function(m,i){return <div key={i} style={{display:"flex",gap:7,marginBottom:5}}><span style={{color:col,flexShrink:0,fontSize:9,marginTop:4}}>◆</span><span style={{color:C.muted,minWidth:36,fontSize:12}}>{m.miktar}</span><span style={{color:C.cream,fontSize:12}}>{m.isim}</span></div>;})}
+        <div style={{fontSize:10,letterSpacing:"0.2em",textTransform:"uppercase",color:col,fontWeight:700,marginBottom:9}}>Malzemeler{porsiyonGoster!==baseKisi?" ("+porsiyonGoster+" kişi)":""}</div>
+        {(d.malzemeler||[]).map(function(m,i){return <div key={i} style={{display:"flex",gap:7,marginBottom:5}}><span style={{color:col,flexShrink:0,fontSize:9,marginTop:4}}>◆</span><span style={{color:C.muted,minWidth:36,fontSize:12}}>{scaleMiktar(m.miktar,scale)}</span><span style={{color:C.cream,fontSize:12}}>{m.isim}</span></div>;})}
       </div>
       <div>
         <div style={{fontSize:10,letterSpacing:"0.2em",textTransform:"uppercase",color:col,fontWeight:700,marginBottom:9}}>Hazırlanış</div>
@@ -482,62 +485,68 @@ var DishCard=memo(function DishCard(props){
   var [ikameSorgu,setIkameSorgu]=useState("");
   useEffect(function(){if(hasD&&ref.current) setTimeout(function(){ref.current.scrollIntoView({behavior:"smooth",block:"nearest"});},100);},[hasD]);
 
-  function loadPuf(){
-    if (pufData){setPufOpen(!pufOpen);return;}
-    if (pufErr){setPufOpen(!pufOpen);return;}
+  function loadPuf(forceRefresh){
+    if (!forceRefresh&&pufData){setPufOpen(!pufOpen);return;}
+    if (!forceRefresh&&pufErr){setPufOpen(!pufOpen);return;}
     setPufOpen(true);setPufLoad(true);setPufErr(null);
-    callAI("Turkish chef. "+dish.isim+" icin 5 pratik pisirme ipucu. Her ipucu 1-2 cumle Turkce. Kisaca tut.\nJSON: baslik string, ipuclari:[{baslik,aciklama}]",900)
-      .then(function(r){setPufData(r);setPufLoad(false);})
-      .catch(function(e){setPufErr(e&&e.message?e.message:"API hatası");setPufLoad(false);});
+    var cacheKey="puf:"+dish.isim;
+    if(!forceRefresh) aiCacheGet(cacheKey).then(function(c){if(c){setPufData(c);setPufLoad(false);return;} doPuf();}); else doPuf();
+    function doPuf(){
+      callAI("Turkish chef. "+dish.isim+" icin 5 pratik pisirme ipucu. Her ipucu 1-2 cumle Turkce. Kisaca tut.\nJSON: baslik string, ipuclari:[{baslik,aciklama}]",900)
+        .then(function(r){aiCacheSet(cacheKey,r);setPufData(r);setPufLoad(false);})
+        .catch(function(e){setPufErr(e&&e.message?e.message:"API hatası");setPufLoad(false);});
+    }
   }
-  function loadSaglik(){
-    if (saglikData){setSaglikOpen(!saglikOpen);return;}
-    if (saglikErr){setSaglikOpen(!saglikOpen);return;}
+  function loadSaglik(forceRefresh){
+    if (!forceRefresh&&saglikData){setSaglikOpen(!saglikOpen);return;}
+    if (!forceRefresh&&saglikErr){setSaglikOpen(!saglikOpen);return;}
     setSaglikOpen(true);setSaglikLoad(true);setSaglikErr(null);
-    var p="Turkish nutritionist. "+dish.isim+" icin kisaca Turkce saglik analizi yap. Maksimum 3 fayda, her aciklama 1 cumle.\nJSON sadece: baslik string, faydalar:[{baslik,aciklama}], dikkat:string, kalori_not:string, oneri:string";
-    callAI(p,900)
-      .then(function(r){setSaglikData(r);setSaglikLoad(false);})
-      .catch(function(e){setSaglikErr(e&&e.message?e.message:"API hatası");setSaglikLoad(false);});
+    var cacheKey="saglik:"+dish.isim;
+    if(!forceRefresh) aiCacheGet(cacheKey).then(function(c){if(c){setSaglikData(c);setSaglikLoad(false);return;} doSaglik();}); else doSaglik();
+    function doSaglik(){
+      var p="Turkish nutritionist. "+dish.isim+" icin kisaca Turkce saglik analizi yap. Maksimum 3 fayda, her aciklama 1 cumle.\nJSON sadece: baslik string, faydalar:[{baslik,aciklama}], dikkat:string, kalori_not:string, oneri:string";
+      callAI(p,900).then(function(r){aiCacheSet(cacheKey,r);setSaglikData(r);setSaglikLoad(false);}).catch(function(e){setSaglikErr(e&&e.message?e.message:"API hatası");setSaglikLoad(false);});
+    }
   }
-  function loadEslesme(){
-    if(eslesmeData){setEslesmeOpen(!eslesmeOpen);return;}
-    if(eslesmeErr){setEslesmeOpen(!eslesmeOpen);return;}
+  function loadEslesme(forceRefresh){
+    if(!forceRefresh&&eslesmeData){setEslesmeOpen(!eslesmeOpen);return;}
+    if(!forceRefresh&&eslesmeErr){setEslesmeOpen(!eslesmeOpen);return;}
     setEslesmeOpen(true);setEslesmeLoad(true);setEslesmeErr(null);
-    callAI("Somelier ve yemek uzmani. "+dish.isim+" icin Turkce eslestirme onerileri. Kisaca tut, her aciklama max 1 cumle.\nJSON: icecekler:[{isim,neden}], yan_yemekler:[{isim,neden}], kacinin:string",800)
-      .then(function(r){setEslesmeData(r);setEslesmeLoad(false);})
-      .catch(function(e){setEslesmeErr(e&&e.message?e.message:"Hata");setEslesmeLoad(false);});
+    var cacheKey="eslesme:"+dish.isim;
+    if(!forceRefresh) aiCacheGet(cacheKey).then(function(c){if(c){setEslesmeData(c);setEslesmeLoad(false);return;} doIt();}); else doIt();
+    function doIt(){callAI("Somelier ve yemek uzmani. "+dish.isim+" icin Turkce eslestirme onerileri. Kisaca tut, her aciklama max 1 cumle.\nJSON: icecekler:[{isim,neden}], yan_yemekler:[{isim,neden}], kacinin:string",800).then(function(r){aiCacheSet(cacheKey,r);setEslesmeData(r);setEslesmeLoad(false);}).catch(function(e){setEslesmeErr(e&&e.message?e.message:"Hata");setEslesmeLoad(false);});}
   }
-  function loadHazirlik(){
-    if(hazirlikData){setHazirlikOpen(!hazirlikOpen);return;}
-    if(hazirlikErr){setHazirlikOpen(!hazirlikOpen);return;}
+  function loadHazirlik(forceRefresh){
+    if(!forceRefresh&&hazirlikData){setHazirlikOpen(!hazirlikOpen);return;}
+    if(!forceRefresh&&hazirlikErr){setHazirlikOpen(!hazirlikOpen);return;}
     setHazirlikOpen(true);setHazirlikLoad(true);setHazirlikErr(null);
-    callAI("Mutfak uzmani. "+dish.isim+" icin Turkce hazirlik ve saklama plani. Kisa tut.\nJSON: onceden_hazirlik:string, saklama_suresi:string, saklama_yontemi:string, isitma:string, meal_prep:string",800)
-      .then(function(r){setHazirlikData(r);setHazirlikLoad(false);})
-      .catch(function(e){setHazirlikErr(e&&e.message?e.message:"Hata");setHazirlikLoad(false);});
+    var cacheKey="hazirlik:"+dish.isim;
+    if(!forceRefresh) aiCacheGet(cacheKey).then(function(c){if(c){setHazirlikData(c);setHazirlikLoad(false);return;} doIt();}); else doIt();
+    function doIt(){callAI("Mutfak uzmani. "+dish.isim+" icin Turkce hazirlik ve saklama plani. Kisa tut.\nJSON: onceden_hazirlik:string, saklama_suresi:string, saklama_yontemi:string, isitma:string, meal_prep:string",800).then(function(r){aiCacheSet(cacheKey,r);setHazirlikData(r);setHazirlikLoad(false);}).catch(function(e){setHazirlikErr(e&&e.message?e.message:"Hata");setHazirlikLoad(false);});}
   }
-  function loadVaryasyon(){
-    if(varyasyonData){setVaryasyonOpen(!varyasyonOpen);return;}
-    if(varyasyonErr){setVaryasyonOpen(!varyasyonOpen);return;}
+  function loadVaryasyon(forceRefresh){
+    if(!forceRefresh&&varyasyonData){setVaryasyonOpen(!varyasyonOpen);return;}
+    if(!forceRefresh&&varyasyonErr){setVaryasyonOpen(!varyasyonOpen);return;}
     setVaryasyonOpen(true);setVaryasyonLoad(true);setVaryasyonErr(null);
-    callAI("Yaratici sef. "+dish.isim+" icin Turkce varyasyon ve degisim onerileri. Kisa tut.\nJSON: varyasyonlar:[{isim,aciklama}], malzeme_degisim:[{original,alternatif,neden}], sef_notu:string",900)
-      .then(function(r){setVaryasyonData(r);setVaryasyonLoad(false);})
-      .catch(function(e){setVaryasyonErr(e&&e.message?e.message:"Hata");setVaryasyonLoad(false);});
+    var cacheKey="varyasyon:"+dish.isim;
+    if(!forceRefresh) aiCacheGet(cacheKey).then(function(c){if(c){setVaryasyonData(c);setVaryasyonLoad(false);return;} doIt();}); else doIt();
+    function doIt(){callAI("Yaratici sef. "+dish.isim+" icin Turkce varyasyon ve degisim onerileri. Kisa tut.\nJSON: varyasyonlar:[{isim,aciklama}], malzeme_degisim:[{original,alternatif,neden}], sef_notu:string",900).then(function(r){aiCacheSet(cacheKey,r);setVaryasyonData(r);setVaryasyonLoad(false);}).catch(function(e){setVaryasyonErr(e&&e.message?e.message:"Hata");setVaryasyonLoad(false);});}
   }
-  function loadTarih(){
-    if(tarihData){setTarihOpen(!tarihOpen);return;}
-    if(tarihErr){setTarihOpen(!tarihOpen);return;}
+  function loadTarih(forceRefresh){
+    if(!forceRefresh&&tarihData){setTarihOpen(!tarihOpen);return;}
+    if(!forceRefresh&&tarihErr){setTarihOpen(!tarihOpen);return;}
     setTarihOpen(true);setTarihLoad(true);setTarihErr(null);
-    callAI("Mutfak tarihcisi. "+dish.isim+" yemeginin Turkce tarih ve kultur bilgisi. Kisa tut.\nJSON: koken:string, tarih:string, yayilim:string, ilginc_bilgi:string",800)
-      .then(function(r){setTarihData(r);setTarihLoad(false);})
-      .catch(function(e){setTarihErr(e&&e.message?e.message:"Hata");setTarihLoad(false);});
+    var cacheKey="tarih:"+dish.isim;
+    if(!forceRefresh) aiCacheGet(cacheKey).then(function(c){if(c){setTarihData(c);setTarihLoad(false);return;} doIt();}); else doIt();
+    function doIt(){callAI("Mutfak tarihcisi. "+dish.isim+" yemeginin Turkce tarih ve kultur bilgisi. Kisa tut.\nJSON: koken:string, tarih:string, yayilim:string, ilginc_bilgi:string",800).then(function(r){aiCacheSet(cacheKey,r);setTarihData(r);setTarihLoad(false);}).catch(function(e){setTarihErr(e&&e.message?e.message:"Hata");setTarihLoad(false);});}
   }
-  function loadKimler(){
-    if(kimlerData){setKimlerOpen(!kimlerOpen);return;}
-    if(kimlerErr){setKimlerOpen(!kimlerOpen);return;}
+  function loadKimler(forceRefresh){
+    if(!forceRefresh&&kimlerData){setKimlerOpen(!kimlerOpen);return;}
+    if(!forceRefresh&&kimlerErr){setKimlerOpen(!kimlerOpen);return;}
     setKimlerOpen(true);setKimlerLoad(true);setKimlerErr(null);
-    callAI("Diyetisyen. "+dish.isim+" yemegi icin Turkce uygunluk analizi. Kisa tut, her aciklama 1 cumle.\nJSON: uygun:[{grup,neden}], dikkatli:[{grup,neden}], uygun_degil:[{grup,neden}]",800)
-      .then(function(r){setKimlerData(r);setKimlerLoad(false);})
-      .catch(function(e){setKimlerErr(e&&e.message?e.message:"Hata");setKimlerLoad(false);});
+    var cacheKey="kimler:"+dish.isim;
+    if(!forceRefresh) aiCacheGet(cacheKey).then(function(c){if(c){setKimlerData(c);setKimlerLoad(false);return;} doIt();}); else doIt();
+    function doIt(){callAI("Diyetisyen. "+dish.isim+" yemegi icin Turkce uygunluk analizi. Kisa tut, her aciklama 1 cumle.\nJSON: uygun:[{grup,neden}], dikkatli:[{grup,neden}], uygun_degil:[{grup,neden}]",800).then(function(r){aiCacheSet(cacheKey,r);setKimlerData(r);setKimlerLoad(false);}).catch(function(e){setKimlerErr(e&&e.message?e.message:"Hata");setKimlerLoad(false);});}
   }
   function loadIkame(){setIkameOpen(!ikameOpen);}
   async function doIkame(){
@@ -597,12 +606,12 @@ var DishCard=memo(function DishCard(props){
         </div>
       </div>
     </div>
-    {showD&&!isLoad&&detail.data?<DetailPanel data={detail.data} col={col}/>:null}
+    {showD&&!isLoad&&detail.data?<DetailPanel data={detail.data} col={col} baseKisi={props.baseKisi||2}/>:null}
     {showD&&!isLoad&&detail.error?<div style={{padding:"11px 14px",background:"rgba(224,82,82,0.07)",borderRadius:"0 0 12px 12px",border:"1px solid rgba(224,82,82,0.2)",borderTop:"none",color:C.red,fontSize:12}}>⚠ {detail.error}</div>:null}
     {pufOpen&&<div className="up" style={{background:"rgba(76,175,122,0.05)",borderRadius:"0 0 14px 14px",border:"1px solid rgba(76,175,122,0.2)",borderTop:"none",padding:"13px 16px"}}>
-      <div style={{fontSize:10,color:C.green,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.2em",marginBottom:10}}>💡 {dish.isim} — Püf Noktaları</div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}><div style={{fontSize:10,color:C.green,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.2em"}}>💡 {dish.isim} — Püf Noktaları</div>{pufData&&!pufLoad&&<button onClick={function(){loadPuf(true);}} style={{fontSize:10,color:C.gold,background:"transparent",border:"none",cursor:"pointer"}} aria-label="Yenile">🔄</button>}</div>
       {pufLoad&&<div style={{display:"flex",gap:8,alignItems:"center",padding:"8px 0"}}><Spinner size={13} color={C.green}/><span style={{fontSize:12,color:C.green}}>Hazırlanıyor…</span></div>}
-      {pufErr&&<div style={{fontSize:12,color:C.red,padding:"7px 10px",background:"rgba(224,82,82,0.07)",borderRadius:8,border:"1px solid rgba(224,82,82,0.2)"}}><button onClick={function(){setPufData(null);setPufErr(null);loadPuf();}} style={{color:C.gold,background:"transparent",border:"none",fontSize:11,marginLeft:6}}>🔄 Tekrar</button></div>}
+      {pufErr&&<div style={{fontSize:12,color:C.red,padding:"7px 10px",background:"rgba(224,82,82,0.07)",borderRadius:8,border:"1px solid rgba(224,82,82,0.2)"}}><button onClick={function(){setPufData(null);setPufErr(null);loadPuf(true);}} style={{color:C.gold,background:"transparent",border:"none",fontSize:11,marginLeft:6}}>🔄 Tekrar</button></div>}
       {!pufLoad&&pufData&&(pufData.ipuclari||[]).length===0&&<div style={{fontSize:12,color:C.muted,padding:"8px 0"}}>Veri yüklenemedi, tekrar deneyin.</div>}
       {pufData&&(pufData.ipuclari||[]).map(function(ip,i){return <div key={i} style={{display:"flex",gap:9,marginBottom:8,paddingBottom:8,borderBottom:i<(pufData.ipuclari.length-1)?"1px solid rgba(76,175,122,0.1)":"none"}}><span style={{color:C.green,fontWeight:700,fontSize:11,flexShrink:0,width:18,marginTop:1}}>{i+1}.</span><div><div style={{fontSize:12,fontWeight:600,color:C.cream,marginBottom:3}}>{ip.baslik||ip.tip||""}</div><div style={{fontSize:12,color:C.muted,lineHeight:1.65}}>{ip.aciklama||ip.description||ip.detay||""}</div></div></div>;})}
     </div>}
@@ -750,24 +759,27 @@ function ShoppingList(props){
   var [list,setList]=useState(null);
   var [error,setError]=useState(null);
   var [checked,setChecked]=useState({});
-  useEffect(function(){
-    var all=props.days.flatMap(function(d){return d.dishes||[];});
-    var mats=all.map(function(d){return d.isim+": "+(d.malzemeler||[]).join(", ");}).join("\n");
-    callAI("Grocery list in Turkish for:\n"+mats+"\nContinue JSON:\n\"kategoriler\":[{\"ad\":\"Sebzeler\",\"malzemeler\":[{\"isim\":\"soğan\",\"miktar\":\"2 adet\",\"tahmini_fiyat\":12}]}],\"toplam_tahmini\":350,\"not\":\"Fiyatlar Mart 2025 Türkiye ortalama perakende\"}",900)
-      .then(function(r){setList(r);}).catch(function(e){setError(e.message);}).finally(function(){setLoading(false);});
-  },[]);
-  return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:999,padding:14}}>
-    <div style={{width:"100%",maxWidth:500,background:"var(--card)",borderRadius:"18px 18px 0 0",padding:20,border:"1px solid "+C.borderG,maxHeight:"80vh",display:"flex",flexDirection:"column"}}>
+  var [copyOk,setCopyOk]=useState(false);
+  function fetchList(){var all=props.days.flatMap(function(d){return d.dishes||[];});var mats=all.map(function(d){return d.isim+": "+(d.malzemeler||[]).join(", ");}).join("\n");setError(null);setLoading(true);callAI("Grocery list in Turkish for:\n"+mats+"\nContinue JSON:\n\"kategoriler\":[{\"ad\":\"Sebzeler\",\"malzemeler\":[{\"isim\":\"soğan\",\"miktar\":\"2 adet\",\"tahmini_fiyat\":12}]}],\"toplam_tahmini\":350,\"not\":\"Fiyatlar Mart 2025 Türkiye ortalama perakende\"}",900).then(function(r){setList(r);}).catch(function(e){setError(e.message);}).finally(function(){setLoading(false);});}
+  useEffect(function(){fetchList();},[]);
+  function copyListText(){if(!list||!list.kategoriler) return;var txt=(list.kategoriler||[]).map(function(kat){return kat.ad.toUpperCase()+"\n"+((kat.malzemeler||[]).map(function(m){return "• "+(m.miktar||"")+" "+(m.isim||"").trim();}).join("\n"));}).join("\n\n");navigator.clipboard.writeText(txt).then(function(){setCopyOk(true);setTimeout(function(){setCopyOk(false);},2000);});}
+  function printList(){window.print();}
+  return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:999,padding:14}} className="alisveris-modal">
+    <style dangerouslySetInnerHTML={{__html:"@media print{.alisveris-modal *{visibility:hidden}.alisveris-print-area,.alisveris-print-area *{visibility:visible !important}.alisveris-print-area{position:absolute !important;left:0 !important;top:0 !important;width:100% !important;max-height:none !important;background:#fff !important;color:#111 !important;padding:24px !important;border-radius:0 !important}"}}/>
+    <div id="alisveris-print-area" className="alisveris-print-area" style={{width:"100%",maxWidth:500,background:"var(--card)",borderRadius:"18px 18px 0 0",padding:20,border:"1px solid "+C.borderG,maxHeight:"80vh",display:"flex",flexDirection:"column"}}>
       <div style={{display:"flex",alignItems:"center",marginBottom:14}}>
         <div style={{flex:1}}>
           <div style={{fontSize:16,fontWeight:700,fontFamily:"'Playfair Display',serif",color:C.cream}}>🛒 Alışveriş Listesi</div>
           {list&&list.toplam_tahmini&&<div style={{fontSize:11,color:C.gold,marginTop:2}}>Tahmini: ~{list.toplam_tahmini} ₺</div>}
         </div>
-        <button onClick={props.onClose} style={{background:"transparent",border:"1px solid var(--border)",borderRadius:9,color:C.muted,padding:"5px 10px",fontSize:12}}>✕ Kapat</button>
+        <div style={{display:"flex",gap:6,alignItems:"center"}}>
+          {list?<><button onClick={copyListText} style={{background:"var(--card2)",border:"1px solid var(--border)",borderRadius:9,color:C.muted,padding:"5px 10px",fontSize:12}}>{copyOk?"✓ Kopyalandı":"📋 Kopyala"}</button><button onClick={printList} style={{background:"var(--card2)",border:"1px solid var(--border)",borderRadius:9,color:C.muted,padding:"5px 10px",fontSize:12}}>🖨️ Yazdır</button></>:null}
+          <button onClick={props.onClose} style={{background:"transparent",border:"1px solid var(--border)",borderRadius:9,color:C.muted,padding:"5px 10px",fontSize:12}}>✕ Kapat</button>
+        </div>
       </div>
       <div style={{flex:1,overflowY:"auto"}}>
         {loading?<div style={{textAlign:"center",padding:36}}><Spinner size={26}/></div>:null}
-        {error?<div style={{color:C.red,fontSize:13,padding:10}}>⚠ {error}</div>:null}
+        {error?<div style={{color:C.red,fontSize:13,padding:10,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>⚠ {error} <button onClick={fetchList} style={{padding:"5px 12px",borderRadius:8,border:"1px solid "+C.gold,background:C.goldDim,color:C.goldL,fontSize:12,fontWeight:600}}>Tekrar dene</button></div>:null}
         {list?(list.kategoriler||[]).map(function(kat,ki){return <div key={ki} style={{marginBottom:16}}>
           <div style={{display:"flex",alignItems:"center",marginBottom:8,paddingBottom:6,borderBottom:"1px solid rgba(212,168,67,0.15)"}}>
             <div style={{flex:1,fontSize:10,letterSpacing:"0.2em",textTransform:"uppercase",color:C.gold,fontWeight:700}}>{kat.ad}</div>
@@ -1029,7 +1041,10 @@ function MenuTab(props){
   var [listDish,setListDish]=useState(null);
   var [showShop,setShowShop]=useState(false);
   var [activeDay,setActiveDay]=useState(0);
+  var [hasMenuHistory,setHasMenuHistory]=useState(null);
+  var [pazarOncelik,setPazarOncelik]=useState(true);
   var cache=useRef({});
+  useEffect(function(){stGet("menu_hist").then(function(h){setHasMenuHistory(Array.isArray(h)&&h.length>0);});},[]);
 
   function tMap(setter,id){setter(function(p){var n=Object.assign({},p);n[id]=!n[id];return n;});}
   function reset(){setDays(null);setDetail(null);}
@@ -1037,21 +1052,43 @@ function MenuTab(props){
   var oL=oI.label||ogun;
   var _mAy=new Date().getMonth()+1,_mPd=PAZAR_AY[_mAy]||{tema:"",urunler:[]};
   var ctx=["Mutfak:"+(selC.length?selC.join(","):"Türk"),"Stil:"+(fI(STILLER,stil)||{}).label,"ImzaMutfak:"+(fI(IMZA_MUTFAK,imzaMutfak)||{}).label,"Beslenme:"+(fI(BESLENME,beslenme)||{}).label,"Baharat:"+(fI(BAHARAT,baharat)||{}).label,"Kişi:"+kisi,"Denge:"+Object.keys(denge).filter(function(k){return denge[k];}).map(function(k){return (DENGE.find(function(d){return d.id===k;})||{label:k}).label;}).join(","),"Mevsim:"+_mPd.tema,"Pazar:"+_mPd.urunler.slice(0,4).join(",")].join("|");
-  var hKey=JSON.stringify({selC,ogun,stil,imzaMutfak,zorluk,beslenme,baharat,alerjen,ekstra,kisi,kalem,gunSayisi});
+  var hKey=JSON.stringify({selC,ogun,stil,imzaMutfak,zorluk,beslenme,baharat,alerjen,ekstra,kisi,kalem,gunSayisi,pazarOncelik});
 
-  // Load from persistent storage
+  // Load from persistent storage (cached menu for this exact key)
   useEffect(function(){
     stGet("menu:"+hKey).then(function(cached){
       if (cached&&!days){ setDays(cached); setStep(3); setActiveDay(0); }
     });
   },[hKey]);
+  // Load last used menu settings
+  useEffect(function(){
+    stGet("menu_last_settings").then(function(s){
+      if (!s||typeof s!=="object") return;
+      if (s.selC&&Array.isArray(s.selC)) setSelC(s.selC);
+      if (s.ogun) setOgun(s.ogun);
+      if (s.stil) setStil(s.stil);
+      if (s.imzaMutfak) setImzaMutfak(s.imzaMutfak);
+      if (s.zorluk) setZorluk(s.zorluk);
+      if (s.beslenme) setBeslenme(s.beslenme);
+      if (s.baharat) setBaharat(s.baharat);
+      if (s.alerjen&&typeof s.alerjen==="object") setAlerjen(s.alerjen);
+      if (s.ekstra&&typeof s.ekstra==="object") setEkstra(s.ekstra);
+      if (s.kisi&&KISI_OPT.includes(s.kisi)) setKisi(s.kisi);
+      if (s.kalem&&[3,4,5,6,7,8,9,10].includes(s.kalem)) setKalem(s.kalem);
+      if (s.gunSayisi&&s.gunSayisi>=1&&s.gunSayisi<=10) setGunSayisi(s.gunSayisi);
+      if (s.denge&&typeof s.denge==="object") setDenge(s.denge);
+      if (s.pazarOncelik!==undefined) setPazarOncelik(!!s.pazarOncelik);
+    });
+  },[]);
 
   function buildPrompt(gNo,exN){
-    return "Turkish chef. Exactly "+kalem+" dishes for Day "+gNo+"/"+gunSayisi+".\nContext:"+ctx+" | Meal:"+oL+" | Difficulty:"+(fI(ZORLUK,zorluk)||{}).label+" | Servings:"+kisi+(exN.length?"\nDo NOT include: "+exN.join(", "):"")+  (memCtx?"\n"+memCtx:"")+(Object.keys(denge).some(function(k){return denge[k];})?("\\nDENGE: "+Object.keys(denge).filter(function(k){return denge[k];}).map(function(k){var _d=DENGE.find(function(x){return x.id===k;});return _d?_d.desc:"";}).filter(Boolean).join(". ")):"")+"\nContinue JSON:\n\"menu_adi\":\"name\",\"aciklama\":\"desc\",\"yemekler\":[{\"isim\":\"dish\",\"ogun\":\""+oL+"\",\"aciklama\":\"1 sentence\",\"malzemeler\":[\"i1\",\"i2\",\"i3\",\"i4\"],\"sure\":\"X dk\",\"zorluk\":\"Kolay\",\"kalori\":\"XXX kcal\"}]}\nAll Turkish, no duplicates.";
+    var pazarStr=pazarOncelik&&_mPd.urunler&&_mPd.urunler.length?"\nMevsimsel ve bu ay pazarda bol olan ürünlere öncelik ver: "+_mPd.urunler.join(", ")+".":"";
+    return "Turkish chef. Exactly "+kalem+" dishes for Day "+gNo+"/"+gunSayisi+".\nContext:"+ctx+" | Meal:"+oL+" | Difficulty:"+(fI(ZORLUK,zorluk)||{}).label+" | Servings:"+kisi+(exN.length?"\nDo NOT include: "+exN.join(", "):"")+pazarStr+(memCtx?"\n"+memCtx:"")+(Object.keys(denge).some(function(k){return denge[k];})?("\nDENGE: "+Object.keys(denge).filter(function(k){return denge[k];}).map(function(k){var _d=DENGE.find(function(x){return x.id===k;});return _d?_d.desc:"";}).filter(Boolean).join(". ")):"")+"\nContinue JSON:\n\"menu_adi\":\"name\",\"aciklama\":\"desc\",\"yemekler\":[{\"isim\":\"dish\",\"ogun\":\""+oL+"\",\"aciklama\":\"1 sentence\",\"malzemeler\":[\"i1\",\"i2\",\"i3\",\"i4\"],\"sure\":\"X dk\",\"zorluk\":\"Kolay\",\"kalori\":\"XXX kcal\"}]}\nAll Turkish, no duplicates.";
   }
 
   async function generate(){
-    if (props.showApiSettings&&!getApiKey()){ setError("Menü oluşturmak için API anahtarı gerekli. Sağ üstten ⚙️ Ayarlar'a girip Anthropic API anahtarını ekleyin."); return; }
+    if (!getApiKey()){ setError(props.showApiSettings ? "Menü oluşturmak için API anahtarı gerekli. Sağ üstten ⚙️ Ayarlar'a girip Anthropic API anahtarını ekleyin." : "AI özellikleri şu an kullanılamıyor. API anahtarı gerekli; yöneticinize sorun veya daha sonra tekrar deneyin."); return; }
+    await stSet("menu_last_settings",{selC,ogun,stil,imzaMutfak,zorluk,beslenme,baharat,alerjen,ekstra,kisi,kalem,gunSayisi,denge,pazarOncelik});
     if (cache.current[hKey]){setDays(cache.current[hKey]);setDetail(null);setActiveDay(0);return;}
     setLoading(true);setError(null);setDays(null);setDetail(null);
     // Build full checklist upfront
@@ -1183,6 +1220,14 @@ function MenuTab(props){
         </div>;})}
       </div>
       {step===1&&<div className="up">
+        {hasMenuHistory===false&&<div style={{padding:"14px 16px",marginBottom:16,borderRadius:14,border:"1px solid rgba(212,168,67,0.25)",background:"linear-gradient(135deg,rgba(212,168,67,0.1),rgba(212,168,67,0.04))",color:C.cream}}>
+          <div style={{fontSize:13,fontWeight:700,color:C.gold,marginBottom:8}}>🍽️ İlk menünü oluştur</div>
+          <div style={{fontSize:11,color:C.muted,lineHeight:1.7,marginBottom:4}}>1) Aşağıdan öğün ve mutfak seç · 2) Detaylara geçip kişi sayısı vb. ayarla · 3) "Menü Oluştur"a tıkla.</div>
+        </div>}
+        {!getApiKey()&&<div style={{padding:"12px 14px",marginBottom:14,borderRadius:12,border:"1px solid rgba(224,82,82,0.25)",background:"rgba(224,82,82,0.08)",color:C.red,fontSize:12,display:"flex",alignItems:"center",gap:8}}>
+          <span style={{fontSize:16}}>⚠️</span>
+          <span>{props.showApiSettings ? "Menü oluşturmak için API anahtarı gerekli. Sağ üstten ⚙️ Ayarlar'a girip ekleyin." : "AI özellikleri şu an kullanılamıyor. API anahtarı gerekli."}</span>
+        </div>}
         <SH label="Öğün"/>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))",gap:8,marginBottom:18}}>
           {OGUNLER.map(function(o){return <button key={o.id} onClick={function(){setOgun(o.id);reset();}} style={{borderRadius:13,overflow:"hidden",border:"2px solid "+(ogun===o.id?C.gold:"transparent"),background:ogun===o.id?C.goldDim:"var(--card)",padding:0}}>
@@ -1247,6 +1292,12 @@ function MenuTab(props){
         <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:14}}>
           {EKSTRA.map(function(e){var on=!!ekstra[e.id];return <button key={e.id} onClick={function(){tMap(setEkstra,e.id);reset();}} style={{padding:"7px 13px",borderRadius:50,fontSize:12,border:"1.5px solid "+(on?C.gold:"var(--border)"),background:on?C.goldDim:"var(--card)",color:on?C.cream:C.muted,display:"inline-flex",alignItems:"center",gap:5}}><span style={{fontSize:14}}>{e.emoji}</span>{e.label}</button>;})}
         </div>
+        <SH label="Mevsim & Pazar"/>
+        <div style={{marginBottom:10}}>
+          <button onClick={function(){setPazarOncelik(!pazarOncelik);reset();}} style={{padding:"8px 14px",borderRadius:10,border:"1.5px solid "+(pazarOncelik?"rgba(76,175,122,0.5)":"var(--border)"),background:pazarOncelik?"rgba(76,175,122,0.1)":"var(--card)",color:pazarOncelik?C.green:C.muted,fontSize:12,display:"flex",alignItems:"center",gap:8}}>
+            <span>🥬</span><span>Bu ay pazarda / mevsimsel öncelik</span>{pazarOncelik&&<span style={{color:C.green}}>✓</span>}
+          </button>
+        </div>
         <SH label="Menü Dengesi"/>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5,marginBottom:14}}>
           {DENGE.map(function(d){var on=!!denge[d.id];return <button key={d.id} onClick={function(){setDenge(function(p){var n=Object.assign({},p);n[d.id]=!n[d.id];return n;});reset();}} style={{padding:"8px 10px",borderRadius:10,border:"1.5px solid "+(on?d.br:"var(--border)"),background:on?d.bg:"var(--card)",color:on?d.col:C.muted,textAlign:"left"}}>
@@ -1271,8 +1322,8 @@ function MenuTab(props){
             <span style={{fontSize:15}}>{n===1?"📋":n<=3?"📅":n<=7?"🗓️":"📆"}</span><span>{n}G</span>
           </button>;})}
         </div>
-        <ErrBox msg={error}/>
-        <GoldBtn onClick={generate} loading={loading} disabled={loading}>
+        <ErrBox msg={error} onRetry={getApiKey()?function(){setError(null);generate();}:undefined}/>
+        <GoldBtn onClick={generate} loading={loading} disabled={loading||!getApiKey()}>
           {loading?<span style={{display:"flex",alignItems:"center",gap:10}}><Spinner size={16}/>{loadingDay?loadingDay+". gün…":"Başlıyor…"}</span>:"✦ "+gunSayisi+"×"+kalem+" Yemeklik Menü Oluştur"}
         </GoldBtn>
       </div>}
@@ -1282,13 +1333,15 @@ function MenuTab(props){
   return <div style={{paddingBottom:60}}>
     {loading&&<MenuYuklemeEkrani adimlar={menuAdimlar}/>}
     {subBar}
-    <div style={{display:"flex",gap:6,padding:"10px 16px 8px",flexWrap:"wrap",alignItems:"center"}}>
+    <div className="no-print" style={{display:"flex",gap:6,padding:"10px 16px 8px",flexWrap:"wrap",alignItems:"center"}}>
       <button onClick={function(){setStep(2);reset();}} style={{padding:"6px 12px",borderRadius:9,border:"1.5px solid var(--border)",background:"transparent",color:C.muted,fontSize:12}}>← Ayarlar</button>
       <div style={{flex:1}}/>
       <button onClick={doShare} style={{padding:"6px 11px",borderRadius:9,border:"1.5px solid "+C.borderG,background:C.goldDim,color:C.goldL,fontSize:12}}>📤 Paylaş</button>
-      <button onClick={function(){if(days&&days[activeDay]) exportMenuCard(days[activeDay],true);}} style={{padding:"6px 11px",borderRadius:9,border:"1.5px solid rgba(155,127,212,0.4)",background:"rgba(155,127,212,0.1)",color:C.purple,fontSize:12}}>🖼️ PNG</button>
-      <button onClick={function(){setShowBildirim(!showBildirim);}} style={{padding:"6px 10px",borderRadius:9,border:"1.5px solid "+(showBildirim?"rgba(45,212,191,0.4)":"var(--border)"),background:showBildirim?"rgba(45,212,191,0.1)":"transparent",color:showBildirim?C.teal:C.muted,fontSize:13}}>🔔</button>
-      <button onClick={function(){setShowShop(true);}} style={{padding:"6px 11px",borderRadius:9,border:"1.5px solid var(--border)",background:"var(--card)",color:C.muted,fontSize:12}}>🛒 Alışveriş</button>
+      <button onClick={function(){if(days&&days[activeDay]) exportMenuCard(days[activeDay],true);}} style={{padding:"6px 11px",borderRadius:9,border:"1.5px solid rgba(155,127,212,0.4)",background:"rgba(155,127,212,0.1)",color:C.purple,fontSize:12}} aria-label="PNG indir">🖼️ PNG</button>
+      <button onClick={function(){window.print();}} style={{padding:"6px 11px",borderRadius:9,border:"1.5px solid var(--border)",background:"var(--card)",color:C.muted,fontSize:12}} aria-label="Yazdır">🖨️ Yazdır</button>
+      <button onClick={function(){if(days&&days.length>0){var ics=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//MasterChefPlanner//TR"];days.forEach(function(d,i){var dt=(d.tarih||new Date(Date.now()+i*86400000).toISOString().slice(0,10)).replace(/-/g,"");var summary=(d.menu_adi||"Gün "+(i+1))+" — "+(d.dishes||[]).map(function(x){return x.isim;}).join(", ").slice(0,200);ics.push("BEGIN:VEVENT","DTSTART;VALUE=DATE:"+dt,"DTEND;VALUE=DATE:"+dt,"SUMMARY:"+summary.replace(/\n/g," "),"END:VEVENT");});ics.push("END:VCALENDAR");var blob=new Blob([ics.join("\r\n")],{type:"text/calendar;charset=utf-8"});var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="menü-takvim.ics";a.click();URL.revokeObjectURL(a.href);}}} style={{padding:"6px 11px",borderRadius:9,border:"1.5px solid "+C.blue+"44",background:C.blue+"11",color:C.blue,fontSize:12}} aria-label="Takvime ekle">📅 Takvim</button>
+      <button onClick={function(){setShowBildirim(!showBildirim);}} style={{padding:"6px 10px",borderRadius:9,border:"1.5px solid "+(showBildirim?"rgba(45,212,191,0.4)":"var(--border)"),background:showBildirim?"rgba(45,212,191,0.1)":"transparent",color:showBildirim?C.teal:C.muted,fontSize:13}} aria-label="Bildirimler">🔔</button>
+      <button onClick={function(){setShowShop(true);}} style={{padding:"6px 11px",borderRadius:9,border:"1.5px solid var(--border)",background:"var(--card)",color:C.muted,fontSize:12}} aria-label="Alışveriş listesi">🛒 Alışveriş</button>
       <button onClick={function(){reset();generate();}} style={{padding:"6px 11px",borderRadius:9,border:"1.5px solid "+C.borderG,background:C.goldDim,color:C.goldL,fontSize:12}}>🔄</button>
     </div>
     {oI.img&&<div style={{margin:"0 16px 12px",borderRadius:16,overflow:"hidden",position:"relative",height:130}}>
@@ -1298,11 +1351,13 @@ function MenuTab(props){
         {cDay&&<div style={{fontSize:17,fontWeight:700,fontFamily:"'Playfair Display',serif",color:C.cream}}>{cDay.menu_adi}</div>}
       </div>
     </div>}
-    {gunSayisi>1&&<div style={{display:"flex",gap:5,padding:"0 16px",marginBottom:10,overflowX:"auto"}}>
+    <div className="menu-print-area" style={{padding:"0 16px"}}>
+    {gunSayisi>1&&<div style={{display:"flex",gap:5,padding:"0 0 10px",marginBottom:10,overflowX:"auto"}}>
       {(days||[]).map(function(d,i){return <button key={i} onClick={function(){setActiveDay(i);}} style={{flexShrink:0,padding:"5px 13px",borderRadius:50,border:"1.5px solid "+(activeDay===i?C.gold:"var(--border)"),background:activeDay===i?C.goldDim:"var(--card)",color:activeDay===i?C.goldL:C.muted,fontSize:12,fontWeight:activeDay===i?700:400}}>{i+1}. Gün</button>;})}
     </div>}
-    <div style={{padding:"0 16px",display:"flex",flexDirection:"column",gap:8}}>
-      {cDay&&cDay.dishes.map(function(d,i){return <DishCard key={d.isim+"-"+i} dish={d} index={i} dayIndex={activeDay} detail={detail} repIdx={repIdx} favorites={props.favorites} onDetail={hDetail} onReplace={hReplace} onFav={tFav} onList={setListDish} delay={i*0.05}/>;})}
+    <div style={{display:"flex",flexDirection:"column",gap:8}}>
+      {cDay&&cDay.dishes.map(function(d,i){return <DishCard key={d.isim+"-"+i} dish={d} index={i} dayIndex={activeDay} detail={detail} repIdx={repIdx} favorites={props.favorites} onDetail={hDetail} onReplace={hReplace} onFav={tFav} onList={setListDish} delay={i*0.05} baseKisi={kisi}/>;})}
+    </div>
     </div>
     {listDish&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:998,padding:12}}>
       <div style={{width:"100%",maxWidth:400,background:"var(--card)",borderRadius:"16px 16px 0 0",padding:18,border:"1px solid "+C.borderG}}>
@@ -1787,6 +1842,9 @@ function TakipTab(){
   }
   var [su,setSu]=useState(0);
   useEffect(function(){stGet("su:"+new Date().toISOString().slice(0,10)).then(function(s){setSu(s||0);});},[]);
+  var [disarida,setDisarida]=useState({kahvalti:false,ogle:false,aksam:false});
+  useEffect(function(){var t=new Date().toISOString().slice(0,10);stGet("takip_disarida:"+t).then(function(r){setDisarida(r||{kahvalti:false,ogle:false,aksam:false});});},[]);
+  async function toggleDisarida(ogun){var t=new Date().toISOString().slice(0,10);setDisarida(function(p){var n=Object.assign({},p);n[ogun]=!n[ogun];stSet("takip_disarida:"+t,n);return n;});}
   async function addSu(ml){var n=su+ml;setSu(n);await stSet("su:"+new Date().toISOString().slice(0,10),n);}
   var GUNLER=["Pzt","Sal","Car","Per","Cum","Cmt","Paz"];
   function parseKal(str){if(!str) return 0; var m=String(str).match(/[0-9]+/); return m?parseInt(m[0]):0;}
@@ -1872,6 +1930,10 @@ function TakipTab(){
             </div>
           </div>
         </div>
+        <div style={{fontSize:10,color:C.muted,textTransform:"uppercase",letterSpacing:"0.15em",marginBottom:8}}>Bugün dışarıda yediklerim</div>
+        <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
+          {[{k:"kahvalti",l:"Kahvaltı"},{k:"ogle",l:"Öğle"},{k:"aksam",l:"Akşam"}].map(function(o){var ac=disarida[o.k];return <button key={o.k} onClick={function(){toggleDisarida(o.k);}} style={{padding:"8px 14px",borderRadius:10,border:"1.5px solid "+(ac?"rgba(212,168,67,0.5)":"var(--border)"),background:ac?C.goldDim:"var(--card)",color:ac?C.goldL:C.muted,fontSize:12,fontWeight:ac?700:400}}>{ac?"✓ ":""}{o.l}</button>;})}
+        </div>
         {(!bugun||bugun.length===0)?<div style={{textAlign:"center",padding:"30px 20px",background:"var(--card)",borderRadius:13,border:"1px solid var(--border)"}}>
           <div style={{fontSize:36,marginBottom:8}}>📋</div>
           <div style={{fontSize:13,color:C.muted,marginBottom:4}}>Bugün yemek eklenmedi</div>
@@ -1888,6 +1950,26 @@ function TakipTab(){
         </div>}
       </div>}
       {!loading&&view==="hafta"&&<div className="up">
+        {hafta&&(function(){
+          var totalK=hafta.reduce(function(a,d){return a+d.items.reduce(function(b,x){var m=String(x.kalori||"").match(/[0-9]+/);return b+(m?parseInt(m[0]):0);},0);},0);
+          var daysWithData=hafta.filter(function(d){return d.items.length>0;}).length;
+          var avgK=daysWithData?Math.round(totalK/daysWithData):0;
+          var totalP=hafta.reduce(function(a,d){return a+d.items.reduce(function(b,x){return b+(x.protein||0);},0);},0);
+          var avgP=daysWithData?Math.round(totalP/daysWithData):0;
+          var hedefPctHafta=hedef>0?Math.round((avgK/hedef)*100):0;
+          var barWidthHafta=hedef>0?Math.min(100,hedefPctHafta):0;
+          var hedefBarBlock=hedef>0?(<div style={{marginTop:10}}><div style={{height:6,borderRadius:3,background:"rgba(91,163,208,0.15)",overflow:"hidden"}}><div style={{height:"100%",width:barWidthHafta+"%",background:C.blue,borderRadius:3}}></div></div><div style={{fontSize:10,color:C.muted,marginTop:4}}>Ortalama günlük hedefe göre: %{hedefPctHafta}</div></div>):null;
+          return <div style={{background:"linear-gradient(135deg,rgba(91,163,208,0.12),rgba(91,163,208,0.04))",borderRadius:14,border:"1px solid rgba(91,163,208,0.25)",padding:"16px 18px",marginBottom:14}}>
+            <div style={{fontSize:10,color:C.blue,letterSpacing:"0.2em",fontWeight:700,marginBottom:10}}>BU HAFTA ÖZETİ</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+              <div><div style={{fontSize:11,color:C.muted,marginBottom:2}}>Toplam kalori</div><div style={{fontSize:20,fontWeight:700,color:C.cream}}>{totalK} <span style={{fontSize:12,fontWeight:400,color:C.muted}}>kcal</span></div></div>
+              <div><div style={{fontSize:11,color:C.muted,marginBottom:2}}>Ort. kalori/gün</div><div style={{fontSize:20,fontWeight:700,color:C.cream}}>{avgK} <span style={{fontSize:12,fontWeight:400,color:C.muted}}>kcal</span></div></div>
+              <div><div style={{fontSize:11,color:C.muted,marginBottom:2}}>Ort. protein/gün</div><div style={{fontSize:20,fontWeight:700,color:C.cream}}>{avgP} <span style={{fontSize:12,fontWeight:400,color:C.muted}}>g</span></div></div>
+              <div><div style={{fontSize:11,color:C.muted,marginBottom:2}}>Veri gün sayısı</div><div style={{fontSize:20,fontWeight:700,color:C.cream}}>{daysWithData}/7</div></div>
+            </div>
+            {hedefBarBlock}
+          </div>;
+        })()}
         <div style={{background:"var(--card)",borderRadius:13,border:"1px solid var(--border)",padding:"16px",marginBottom:14}}>
           <div style={{fontSize:10,color:C.muted,textTransform:"uppercase",letterSpacing:"0.2em",fontWeight:600,marginBottom:14}}>7 Günlük Kalori</div>
           <div style={{display:"flex",gap:5,alignItems:"flex-end",height:110}}>
@@ -2227,6 +2309,8 @@ function YemekGunlugu(){
 function FavorilerTab(props){
   var [section,setSection]=useState("fav");
   var [history,setHistory]=useState(null);
+  var [editingNoteFor,setEditingNoteFor]=useState(null);
+  var [noteDraft,setNoteDraft]=useState("");
   useEffect(function(){stGet("menu_hist").then(function(h){setHistory(h||[]);});},[]);
 
   var favorites=props.favorites||[];
@@ -2246,9 +2330,12 @@ function FavorilerTab(props){
           </button>;
         })}
       </div>
+      {props.onExportData&&<div style={{marginBottom:14,display:"flex",justifyContent:"flex-end"}}>
+        <button onClick={props.onExportData} style={{padding:"7px 12px",borderRadius:9,border:"1px solid var(--border)",background:"var(--card2)",color:C.muted,fontSize:11}}>📥 Verilerimi dışa aktar (JSON)</button>
+      </div>}
 
       {section==="fav"&&<div>
-        {favorites.length===0?<div style={{textAlign:"center",padding:"40px 20px"}}><div style={{fontSize:40,marginBottom:10}}>🤍</div><div style={{fontSize:14,color:C.muted}}>Henüz favori yok</div><div style={{fontSize:12,color:"var(--dim)",marginTop:5}}>Tarif kartlarındaki ❤️ butonunu kullanın</div></div>:
+        {favorites.length===0?<div style={{textAlign:"center",padding:"40px 20px"}}><div style={{fontSize:40,marginBottom:10}}>🤍</div><div style={{fontSize:14,color:C.muted}}>Henüz favori tarifin yok</div><div style={{fontSize:12,color:"var(--dim)",marginTop:5,marginBottom:16}}>Menüden bir yemeğe kalp basarak ekleyebilirsin.</div>{props.onGoToMenu&&<button onClick={props.onGoToMenu} style={{padding:"12px 24px",borderRadius:12,border:"2px solid "+C.gold,background:C.goldDim,color:C.goldL,fontSize:14,fontWeight:700}}>🍽️ Menüye Git</button>}</div>:
         <div style={{display:"flex",flexDirection:"column",gap:7}}>
           {favorites.map(function(dish,i){
             var col=OGUN_COL[dish.ogun]||C.gold;
@@ -2261,6 +2348,7 @@ function FavorilerTab(props){
                   {dish.kalori?<span style={{fontSize:10,padding:"2px 7px",borderRadius:50,background:"rgba(155,127,212,0.1)",color:C.purple}}>🔥 {dish.kalori}</span>:null}
                 </div>
                 <p style={{fontSize:12,color:C.muted,fontStyle:"italic",lineHeight:1.5}}>{dish.aciklama}</p>
+                {editingNoteFor===dish.isim?<div style={{marginTop:8}}><textarea value={noteDraft} onChange={function(e){setNoteDraft(e.target.value);}} placeholder="Az tuz, fırın 180°…" rows={2} style={{width:"100%",padding:"8px 10px",borderRadius:8,border:"1px solid var(--border)",background:"var(--card2)",color:C.cream,fontSize:12,resize:"none"}}/><div style={{display:"flex",gap:6,marginTop:6}}><button onClick={function(){props.onUpdateFavNote&&props.onUpdateFavNote(dish,noteDraft.trim());setEditingNoteFor(null);}} style={{padding:"5px 12px",borderRadius:8,fontSize:11,border:"1px solid "+C.gold,background:C.goldDim,color:C.goldL}}>Kaydet</button><button onClick={function(){setEditingNoteFor(null);setNoteDraft("");}} style={{padding:"5px 12px",borderRadius:8,fontSize:11,border:"1px solid var(--border)",background:"var(--card2)",color:C.muted}}>İptal</button></div></div>:<div style={{marginTop:6}}>{dish.notlarim?<div style={{fontSize:11,color:C.gold,fontStyle:"italic",padding:"6px 10px",background:"rgba(212,168,67,0.08)",borderRadius:8,border:"1px solid rgba(212,168,67,0.2)"}}>📝 {dish.notlarim}</div>:null}<button onClick={function(){setEditingNoteFor(dish.isim);setNoteDraft(dish.notlarim||"");}} style={{marginTop:4,padding:"4px 10px",borderRadius:6,fontSize:10,border:"1px solid var(--border)",background:"transparent",color:C.muted}}>{dish.notlarim?"Notu düzenle":"📝 Not ekle"}</button></div>}
                 {dish.savedAt?<div style={{fontSize:10,color:"var(--dim)",marginTop:4}}>Kaydedildi: {new Date(dish.savedAt).toLocaleDateString("tr-TR")}</div>:null}
               </div>
               <div style={{display:"flex",flexDirection:"column",gap:5}}>
@@ -2323,24 +2411,39 @@ function ChatTab(){
   var [messages,setMessages]=useState([{role:"assistant",content:"Merhaba! Ben Master Chef AI 👨‍🍳\n\nYemek, tarif, beslenme veya mutfak hakkında her sorunuzu yanıtlarım. Nasıl yardımcı olabilirim?"}]);
   var [input,setInput]=useState("");
   var [loading,setLoading]=useState(false);
+  var [listening,setListening]=useState(false);
   var bottomRef=useRef(null);
+  var SpeechRecognition=typeof window!=="undefined"&&(window.SpeechRecognition||window.webkitSpeechRecognition);
+  function startVoice(){
+    if(!SpeechRecognition||listening||loading) return;
+    var rec=new SpeechRecognition();rec.lang="tr-TR";rec.continuous=false;rec.interimResults=false;
+    rec.onstart=function(){setListening(true);};
+    rec.onend=function(){setListening(false);};
+    rec.onresult=function(e){var t=e.results[0]&&e.results[0][0]?e.results[0][0].transcript:"";if(t){setInput(function(prev){return prev?prev+" "+t:t;});} setListening(false);};
+    rec.onerror=function(){setListening(false);};
+    try{rec.start();}catch(err){setListening(false);}
+  }
   useEffect(function(){if(bottomRef.current) bottomRef.current.scrollIntoView({behavior:"smooth"});},[messages]);
   function send(){
     if (!input.trim()||loading) return;
+    if (!getApiKey()){ setMessages(function(p){return p.concat([{role:"assistant",content:"⚠️ AI özellikleri için API anahtarı gerekli. Ayarlardan ekleyin veya yöneticinize sorun."}]);}); return; }
     var um={role:"user",content:input.trim()};
     setMessages(function(p){return p.concat([um]);});
     setInput("");setLoading(true);
     var apiMsgs=messages.concat([um]).map(function(m){return {role:m.role,content:m.content};});
-    callAIText("Sen Master Chef AI'sın. Türkçe konuşan, deneyimli ve samimi bir şefsin. Yemek, tarif, beslenme ve mutfak teknikleri konularında yardım et. Motive edici ol ve emojiler kullan.",apiMsgs,700)
-      .then(function(r){setMessages(function(p){return p.concat([{role:"assistant",content:r}]);});})
+    callAIText("Sen Master Chef AI'sın. Türkçe konuşan, deneyimli ve samimi bir şefsin. Yemek, tarif, beslenme ve mutfak teknikleri konularında yardım et. Motive edici ol ve emojiler kullan. Yanıtını düz metin olarak yaz, JSON döndürme.",apiMsgs,700)
+      .then(function(r){var txt=typeof r==="string"?r:(r&&typeof r==="object"?(r.message||r.text||r.cevap||r.reply||r.answer||r.content||(r.sentiment&&r.topic?r.sentiment+" — "+r.topic:null)||JSON.stringify(r)):String(r)); setMessages(function(p){return p.concat([{role:"assistant",content:txt||"Yanıt alındı."}]);});})
       .catch(function(e){var msg=e.message||""; if(msg==="HTTP 404") msg="API proxy bulunamadı (404). Yerel için 'npm run dev' kullanın; canlıda Vercel'de api klasörünün dağıtıldığından emin olun."; setMessages(function(p){return p.concat([{role:"assistant",content:"⚠ Hata: "+msg}]);});})
       .finally(function(){setLoading(false);});
   }
-  var QUICK=["🍝 Kolay makarna tarifi","🥗 Diyet için ne yemeliyim?","🥩 Biftek nasıl pişirilir?","🫙 Domates sosu püf noktası"];
+  function retryLast(){var lastUserIdx=-1;for(var i=messages.length-1;i>=0;i--)if(messages[i].role==="user"){lastUserIdx=i;break;}if(lastUserIdx<0||messages.length<2||loading||!getApiKey())return;var content=messages[lastUserIdx].content;var prevMsgs=messages.slice(0,lastUserIdx);var apiMsgs=prevMsgs.concat([{role:"user",content:content}]).map(function(m){return {role:m.role,content:m.content};});setMessages(prevMsgs.concat([{role:"user",content:content}]));setLoading(true);callAIText("Sen Master Chef AI'sın. Türkçe konuşan, deneyimli ve samimi bir şefsin. Yemek, tarif, beslenme ve mutfak teknikleri konularında yardım et. Motive edici ol ve emojiler kullan. Yanıtını düz metin olarak yaz, JSON döndürme.",apiMsgs,700).then(function(r){var txt=typeof r==="string"?r:(r&&typeof r==="object"?(r.message||r.text||r.cevap||r.reply||r.answer||r.content||(r.sentiment&&r.topic?r.sentiment+" — "+r.topic:null)||JSON.stringify(r)):String(r));setMessages(function(p){return p.concat([{role:"assistant",content:txt||"Yanıt alındı."}]);});}).catch(function(e){var msg=e.message||"";if(msg==="HTTP 404")msg="API proxy bulunamadı (404).";setMessages(function(p){return p.concat([{role:"assistant",content:"⚠ Hata: "+msg}]);});}).finally(function(){setLoading(false);});}
+  var lastMsg=messages[messages.length-1];var isErrorMsg=lastMsg&&lastMsg.role==="assistant"&&typeof lastMsg.content==="string"&&(lastMsg.content.startsWith("⚠ Hata:")||lastMsg.content.startsWith("⚠️"));
+  var QUICK=["🍝 Kolay makarna tarifi","🥗 Diyet için ne yemeliyim?","🍲 Artık yemekten ne yapabilirim?","🥩 Biftek nasıl pişirilir?","🫙 Domates sosu püf noktası"];
   return <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 70px)"}}>
     <div style={{background:"var(--card)",padding:"16px 20px 13px",borderBottom:"1px solid rgba(91,163,208,0.2)"}}>
       <div style={{fontSize:10,letterSpacing:"0.35em",color:C.blue,textTransform:"uppercase",fontWeight:700,marginBottom:3}}>✦ AI Şef ✦</div>
       <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:19,fontWeight:700,color:C.cream}}>Şef ile <em style={{color:"#93C5FD"}}>Konuş</em></h2>
+      {!getApiKey()&&<div style={{marginTop:10,padding:"9px 12px",borderRadius:10,border:"1px solid rgba(224,82,82,0.25)",background:"rgba(224,82,82,0.08)",color:C.red,fontSize:11}}>⚠️ API anahtarı gerekli — mesaj gönderemezsiniz.</div>}
     </div>
     <div style={{flex:1,overflowY:"auto",padding:"12px 16px 6px"}}>
       {messages.length===1&&<div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:10}}>
@@ -2349,9 +2452,10 @@ function ChatTab(){
       {messages.map(function(m,i){var isUser=m.role==="user";return <div key={i} className="up" style={{display:"flex",justifyContent:isUser?"flex-end":"flex-start",marginBottom:9}}>
         <div style={{maxWidth:"86%",padding:"10px 14px",borderRadius:isUser?"13px 13px 3px 13px":"13px 13px 13px 3px",background:isUser?"linear-gradient(135deg,rgba(212,168,67,0.2),rgba(212,168,67,0.09))":"var(--card)",border:"1px solid "+(isUser?"rgba(212,168,67,0.28)":"var(--border)"),color:isUser?C.cream:"var(--cream)",fontSize:13,lineHeight:1.7,whiteSpace:"pre-wrap"}}>
           {!isUser&&<div style={{fontSize:9,color:C.blue,fontWeight:700,letterSpacing:"0.12em",marginBottom:3}}>👨‍🍳 MASTER CHEF AI</div>}
-          {m.content}
+          {typeof m.content==="string"?m.content:String(m.content)}
         </div>
       </div>;})}
+      {isErrorMsg&&!loading&&<div style={{display:"flex",justifyContent:"flex-start",marginBottom:9}}><button onClick={retryLast} style={{padding:"6px 14px",borderRadius:9,border:"1px solid "+C.gold,background:C.goldDim,color:C.goldL,fontSize:12,fontWeight:600}}>Tekrar dene</button></div>}
       {loading&&<div style={{display:"flex",justifyContent:"flex-start",marginBottom:9}}>
         <div style={{padding:"11px 15px",borderRadius:"13px 13px 13px 3px",background:"var(--card)",border:"1px solid var(--border)"}}>
           <div style={{display:"flex",gap:4}}>
@@ -2363,9 +2467,69 @@ function ChatTab(){
     </div>
     <div style={{padding:"7px 16px 13px",borderTop:"1px solid var(--border)",background:"var(--bg)"}}>
       <div style={{display:"flex",gap:6}}>
-        <input value={input} onChange={function(e){setInput(e.target.value);}} onKeyDown={function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}} placeholder="Sorunuzu yazın…" style={{flex:1,background:"var(--card)",border:"1.5px solid var(--border)",borderRadius:10,padding:"10px 14px",color:C.cream,fontSize:13,outline:"none"}}/>
-        <button onClick={send} disabled={loading||!input.trim()} style={{width:44,height:44,borderRadius:10,border:"1.5px solid rgba(91,163,208,0.4)",background:loading||!input.trim()?"transparent":"rgba(91,163,208,0.12)",color:loading||!input.trim()?"var(--dim)":C.blue,fontSize:16,flexShrink:0}}>➤</button>
+        {SpeechRecognition&&<button onClick={startVoice} disabled={loading} title="Sesli soru" aria-label="Sesli soru sor" style={{width:44,height:44,borderRadius:10,border:"1.5px solid "+(listening?"rgba(224,82,82,0.5)":"var(--border)"),background:listening?"rgba(224,82,82,0.1)":"var(--card)",color:listening?C.red:C.muted,fontSize:18,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>🎤</button>}
+        <input value={input} onChange={function(e){setInput(e.target.value);}} onKeyDown={function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}} placeholder="Sorunuzu yazın…" style={{flex:1,background:"var(--card)",border:"1.5px solid var(--border)",borderRadius:10,padding:"10px 14px",color:C.cream,fontSize:13,outline:"none"}} aria-label="Mesaj yaz"/>
+        <button onClick={send} disabled={loading||!input.trim()||!getApiKey()} style={{width:44,height:44,borderRadius:10,border:"1.5px solid rgba(91,163,208,0.4)",background:loading||!input.trim()||!getApiKey()?"transparent":"rgba(91,163,208,0.12)",color:loading||!input.trim()||!getApiKey()?"var(--dim)":C.blue,fontSize:16,flexShrink:0}} aria-label="Gönder">➤</button>
       </div>
+    </div>
+  </div>;
+}
+
+// ══════════════════════════════════════════════════════════════
+// TAB: HİKAYESİ OLAN YEMEKLER
+// ══════════════════════════════════════════════════════════════
+var HIKAYE_MUTFAKLAR=[{id:"turk",label:"Türk",emoji:"🫕"},{id:"italyan",label:"İtalyan",emoji:"🍕"},{id:"fransiz",label:"Fransız",emoji:"🥐"},{id:"japon",label:"Japon",emoji:"🍜"},{id:"hint",label:"Hint",emoji:"🍛"},{id:"akdeniz",label:"Akdeniz",emoji:"🐟"},{id:"meksika",label:"Meksika",emoji:"🌮"},{id:"karisik",label:"Hepsinden karışık",emoji:"🌍"}];
+function HikayeTab(props){
+  var [mutfak,setMutfak]=useState("turk");
+  var [loading,setLoading]=useState(false);
+  var [error,setError]=useState(null);
+  var [yemekler,setYemekler]=useState(null);
+  var [acik,setAcik]=useState(null);
+  function getir(){
+    if(!getApiKey()){setError("Hikayeli yemekler için API anahtarı gerekli. Ayarlardan ekleyin.");return;}
+    setError(null);setYemekler(null);setLoading(true);
+    var mutfakLabel=HIKAYE_MUTFAKLAR.find(function(m){return m.id===mutfak;});
+    var mutfakAdi=mutfakLabel?mutfakLabel.label:"Türk";
+    var prompt="Sen yemek kültürü uzmanısın. "+mutfakAdi+" mutfağından (veya karışık seçildiyse dünya mutfaklarından) hikayesi olan, nerede meşhur olduğu bilinen, nasıl yapıldığı ve özelliği anlatılabilecek 4 yemek seç. Her biri için: isim (Türkçe), nerede_meşhur (şehir/bölge/ülke), hikaye (2-4 cümle, kökeni/efsanesi), nasil_yapilir (kısa özet, 1-2 cümle), ozellik (neyle ünlü, tadı, sunumu). Sadece JSON döndür. JSON formatı: {\"yemekler\":[{\"isim\":\"string\",\"nerede_meşhur\":\"string\",\"hikaye\":\"string\",\"nasil_yapilir\":\"string\",\"ozellik\":\"string\"}]}";
+    callAI(prompt,1000).then(function(r){
+      var list=r&&r.yemekler?r.yemekler:Array.isArray(r)?r:[];
+      setYemekler(list.length?list:null);
+      if(list.length) setAcik(0); else setError("Yemek listesi alınamadı.");
+    }).catch(function(e){setError(e.message||"Hata oluştu.");}).finally(function(){setLoading(false);});
+  }
+  return <div style={{paddingBottom:80}}>
+    <div style={{background:"var(--card)",padding:"20px 20px 16px",borderBottom:"1px solid rgba(212,168,67,0.2)"}}>
+      <div style={{fontSize:10,letterSpacing:"0.35em",color:C.gold,textTransform:"uppercase",fontWeight:700,marginBottom:6}}>✦ Hikaye Serisi ✦</div>
+      <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,fontWeight:700,color:C.cream,marginBottom:4}}>Hikayesi Olan <em style={{color:C.goldL}}>Yemekler</em></h2>
+      <p style={{fontSize:12,color:C.muted}}>Nerede meşhur, nasıl yapılıyor, özelliği ne? Her yemeğin kısa hikayesi.</p>
+    </div>
+    <div style={{padding:"16px"}}>
+      <div style={{fontSize:11,color:C.muted,textTransform:"uppercase",letterSpacing:"0.15em",marginBottom:10}}>Mutfak seç</div>
+      <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:16}}>
+        {HIKAYE_MUTFAKLAR.map(function(m){var ac=mutfak===m.id;return <button key={m.id} onClick={function(){setMutfak(m.id);setYemekler(null);setError(null);}} style={{padding:"8px 14px",borderRadius:10,border:"1.5px solid "+(ac?C.gold:"var(--border)"),background:ac?C.goldDim:"var(--card)",color:ac?C.goldL:C.muted,fontSize:12,fontWeight:ac?700:400}}>{m.emoji} {m.label}</button>;})}
+      </div>
+      {!getApiKey()&&<div style={{padding:"12px 14px",marginBottom:14,borderRadius:12,border:"1px solid rgba(224,82,82,0.25)",background:"rgba(224,82,82,0.08)",color:C.red,fontSize:12}}>⚠️ API anahtarı gerekli. Ayarlardan ekleyin.</div>}
+      <ErrBox msg={error} onRetry={getApiKey()?getir:undefined}/>
+      <button onClick={getir} disabled={loading||!getApiKey()} style={{width:"100%",padding:"14px",borderRadius:13,border:"2px solid rgba(212,168,67,0.5)",background:loading?"rgba(212,168,67,0.06)":"linear-gradient(135deg,rgba(212,168,67,0.22),rgba(212,168,67,0.08))",color:loading?"#666":C.goldL,fontSize:14,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+        {loading?<><Spinner size={18}/> Hikayeler getiriliyor…</>:"📜 Hikayeli yemekler getir"}
+      </button>
+      {yemekler&&yemekler.length>0&&<div style={{marginTop:20,display:"flex",flexDirection:"column",gap:12}}>
+        {yemekler.map(function(y,i){var isOpen=acik===i;return <div key={i} className="up" style={{animationDelay:i*0.05+"s",background:"var(--card)",borderRadius:14,border:"1px solid var(--border)",overflow:"hidden"}}>
+          <button onClick={function(){setAcik(acik===i?null:i);}} style={{width:"100%",padding:"14px 16px",textAlign:"left",display:"flex",alignItems:"center",gap:12,border:"none",background:"transparent",color:C.cream,cursor:"pointer"}}>
+            <span style={{fontSize:24}}>🍽️</span>
+            <div style={{flex:1}}>
+              <div style={{fontSize:15,fontWeight:700,fontFamily:"'Playfair Display',serif"}}>{y.isim||"Yemek"}</div>
+              <div style={{fontSize:11,color:C.gold,marginTop:2}}>📍 {y.nerede_meşhur||"—"}</div>
+            </div>
+            <span style={{fontSize:18,color:C.muted,transform:isOpen?"rotate(180deg)":"rotate(0deg)",transition:"transform 0.2s"}}>▼</span>
+          </button>
+          {isOpen&&<div style={{padding:"0 16px 16px",borderTop:"1px solid var(--border)"}}>
+            {y.hikaye&&<div style={{marginTop:12}}><div style={{fontSize:10,color:C.gold,letterSpacing:"0.12em",marginBottom:6}}>HİKAYE</div><p style={{fontSize:12,color:C.muted,lineHeight:1.7}}>{y.hikaye}</p></div>}
+            {y.nasil_yapilir&&<div style={{marginTop:12}}><div style={{fontSize:10,color:C.blue,letterSpacing:"0.12em",marginBottom:6}}>NASIL YAPILIR</div><p style={{fontSize:12,color:C.muted,lineHeight:1.7}}>{y.nasil_yapilir}</p></div>}
+            {y.ozellik&&<div style={{marginTop:12}}><div style={{fontSize:10,color:C.purple,letterSpacing:"0.12em",marginBottom:6}}>ÖZELLİĞİ</div><p style={{fontSize:12,color:C.muted,lineHeight:1.7}}>{y.ozellik}</p></div>}
+          </div>}
+        </div>;})}
+      </div>}
     </div>
   </div>;
 }
@@ -2600,6 +2764,7 @@ function KurTab(){
   var [adimlar,setAdimlar]=useState([]);
 
   async function generate(){
+    if(!getApiKey()){setError("Kür oluşturmak için API anahtarı gerekli. Ayarlardan ekleyin veya yöneticinize sorun.");return;}
     if(!sorun.trim()||secHedefler.length===0){setError("Lütfen en az 1 hedef seçin ve sorunuzu yazın.");return;}
     setLoading(true);setError(null);setResult(null);setAcikEkol(null);setLoadingEkol("");
     var eListPre=secEkoller.length>0?secEkoller.map(function(k){return KUR_EKOLLER.find(function(x){return x.id===k;})||{label:k};}):KUR_EKOLLER;
@@ -2768,10 +2933,11 @@ function KurTab(){
           <div style={{fontSize:9,color:C.dim,lineHeight:1.3}}>{e.desc}</div>
         </button>;})}
       </div>
-      <button onClick={generate} disabled={!sorun.trim()||loading} style={{width:"100%",padding:"14px",borderRadius:12,border:"none",background:sorun.trim()&&!loading?C.gold:"var(--border)",color:sorun.trim()&&!loading?"#000":C.dim,fontSize:14,fontWeight:700}}>
+      {!getApiKey()&&<div style={{padding:"10px 12px",marginBottom:12,borderRadius:10,border:"1px solid rgba(224,82,82,0.25)",background:"rgba(224,82,82,0.08)",color:C.red,fontSize:11}}>⚠️ Kür oluşturmak için API anahtarı gerekli.</div>}
+      <button onClick={generate} disabled={!sorun.trim()||loading||!getApiKey()} style={{width:"100%",padding:"14px",borderRadius:12,border:"none",background:sorun.trim()&&!loading&&getApiKey()?C.gold:"var(--border)",color:sorun.trim()&&!loading&&getApiKey()?"#000":C.dim,fontSize:14,fontWeight:700}}>
         {loading?<span style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8}}><Spinner size={16} color="#000"/>Kürler hazırlanıyor…</span>:"✨ Kişiselleştirilmiş Kür Oluştur"}
       </button>
-      {error&&<div style={{marginTop:10,padding:"10px 13px",background:"rgba(224,82,82,0.08)",border:"1px solid rgba(224,82,82,0.2)",borderRadius:9,fontSize:12,color:C.red}}>⚠ {error} <button onClick={generate} style={{marginLeft:8,color:C.gold,background:"transparent",border:"none",fontSize:11,textDecoration:"underline",cursor:"pointer"}}>Tekrar dene</button></div>}
+      {error&&<div style={{marginTop:10,padding:"10px 13px",background:"rgba(224,82,82,0.08)",border:"1px solid rgba(224,82,82,0.2)",borderRadius:9,fontSize:12,color:C.red}}>⚠ {error} <button onClick={function(){if(getApiKey())generate();}} style={{marginLeft:8,color:C.gold,background:"transparent",border:"none",fontSize:11,textDecoration:"underline",cursor:"pointer"}}>Tekrar dene</button></div>}
     </div>
   </div>;
 
@@ -3714,10 +3880,34 @@ export default function App(){
   var [activeTab,setActiveTab]=useState("menu");
   var [isDark,setIsDark]=useState(true);
   var [showSettings,setShowSettings]=useState(false);
+  var [showChangelog,setShowChangelog]=useState(false);
+  var [showMoreTabs,setShowMoreTabs]=useState(false);
+  var [showShortcuts,setShowShortcuts]=useState(false);
+  var [showOnboarding,setShowOnboarding]=useState(false);
+  var [onboardingStep,setOnboardingStep]=useState(0);
   var [apiKeyInput,setApiKeyInput]=useState(typeof localStorage!=="undefined"?localStorage.getItem("anthropic_api_key")||"":"");
   var [apiKeyTestError,setApiKeyTestError]=useState("");
   var [apiKeyTestLoading,setApiKeyTestLoading]=useState(false);
   var isDev=typeof window!=="undefined"&&(window.location.hostname==="localhost"||window.location.hostname.startsWith("127."));
+
+  useEffect(function(){var last=typeof localStorage!=="undefined"?localStorage.getItem("masterchef_last_version"):null;if(last!==APP_VERSION){setShowChangelog(true);}else{setShowChangelog(false);}},[]);
+  useEffect(function(){
+    var done=typeof localStorage!=="undefined"&&localStorage.getItem("masterchef_onboarding_done");
+    if(!done) setShowOnboarding(true);
+  },[]);
+  useEffect(function(){
+    function onKey(e){
+      if(e.key==="?"&&!e.ctrlKey&&!e.metaKey){e.preventDefault();setShowShortcuts(function(s){return !s;});return;}
+      if(e.key==="Escape"){setShowChangelog(false);setShowSettings(false);setShowMoreTabs(false);setShowShortcuts(false);return;}
+      if(e.target&&(e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA")) return;
+      if(e.key==="m"||e.key==="M"){e.preventDefault();setActiveTab("menu");setShowMoreTabs(false);}
+      if(e.key==="f"||e.key==="F"){e.preventDefault();setActiveTab("favoriler");setShowMoreTabs(false);}
+    }
+    window.addEventListener("keydown",onKey);return function(){window.removeEventListener("keydown",onKey);};
+  },[]);
+  function closeChangelog(){if(typeof localStorage!=="undefined") localStorage.setItem("masterchef_last_version",APP_VERSION);setShowChangelog(false);}
+  function finishOnboarding(){if(typeof localStorage!=="undefined") localStorage.setItem("masterchef_onboarding_done","1");setShowOnboarding(false);}
+  function exportFavorilerListe(){var j=JSON.stringify({version:APP_VERSION,exportedAt:new Date().toISOString(),favorites:favorites,lists:lists},null,2);var blob=new Blob([j],{type:"application/json"});var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="masterchef-favoriler-listeler-"+new Date().toISOString().slice(0,10)+".json";a.click();URL.revokeObjectURL(a.href);}
 
   useEffect(function(){
     var s=sessionStorage.getItem("chef_u");
@@ -3740,6 +3930,11 @@ export default function App(){
     if (isGuest){alert("Favori için hesap açın.");return;}
     var isFav=favorites.some(function(f){return f.isim===dish.isim;});
     var u=isFav?favorites.filter(function(f){return f.isim!==dish.isim;}):favorites.concat([Object.assign({savedAt:new Date().toISOString()},dish)]);
+    setFavorites(u);await stSet("fav:"+user,u);
+  }
+  async function updateFavNote(dish,notlarim){
+    if (isGuest) return;
+    var u=favorites.map(function(f){if(f.isim!==dish.isim)return f;return Object.assign({},f,{notlarim:notlarim||""});});
     setFavorites(u);await stSet("fav:"+user,u);
   }
   async function addToList(lid,dish){
@@ -3766,13 +3961,41 @@ export default function App(){
 
   return <div style={{minHeight:"100vh",background:"var(--bg)",color:C.cream}}>
     <style>{makeCSS(isDark)}</style>
-    <ThemeToggle isDark={isDark} onToggle={toggleTheme} hasUser={true}/>
-    <div style={{position:"fixed",top:10,right:10,zIndex:600,display:"flex",gap:4,alignItems:"center"}}>
+    <div className="no-print"><ThemeToggle isDark={isDark} onToggle={toggleTheme} hasUser={true}/></div>
+    <div className="no-print" style={{position:"fixed",top:10,right:10,zIndex:600,display:"flex",gap:4,alignItems:"center"}}>
       {isDev&&<><span title={hasApiKey?"API anahtarı ayarlı":"API anahtarı gerekli"} style={{fontSize:14,opacity:hasApiKey?1:0.9}}>{hasApiKey?"🔑":"⚠️"}</span>
       <button onClick={function(){setApiKeyInput(typeof localStorage!=="undefined"?localStorage.getItem("anthropic_api_key")||"":"");setApiKeyTestError("");setShowSettings(true);}} title="Ayarlar (sadece geliştirme)" style={{padding:"4px 8px",borderRadius:50,background:"var(--card)",border:"1px solid var(--border)",fontSize:14,color:C.muted}}>⚙️</button></>}
+      <button onClick={function(){setShowChangelog(true);}} style={{padding:"4px 8px",borderRadius:50,background:"var(--card)",border:"1px solid var(--border)",fontSize:11,color:C.muted}} title="Yenilikler">v{APP_VERSION}</button>
       <div style={{padding:"4px 9px",borderRadius:50,background:"var(--card)",border:"1px solid var(--border)",fontSize:11,color:C.muted}}>{isGuest?"👤":user}</div>
       <button onClick={logout} style={{padding:"4px 8px",borderRadius:50,background:"var(--card)",border:"1px solid var(--border)",fontSize:11,color:C.muted}}>✕</button>
     </div>
+    {showChangelog&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:701,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={function(e){if(e.target===e.currentTarget)closeChangelog();}}>
+      <div className="up" style={{background:"var(--card)",border:"1px solid var(--border)",borderRadius:16,padding:22,maxWidth:420,width:"100%",maxHeight:"85vh",overflowY:"auto"}} onClick={function(e){e.stopPropagation();}}>
+        <div style={{fontSize:16,fontWeight:700,color:C.cream,marginBottom:4}}>✨ Yenilikler</div>
+        <div style={{fontSize:11,color:C.gold,marginBottom:14}}>Sürüm {APP_VERSION}</div>
+        <ul style={{fontSize:12,color:C.muted,lineHeight:1.9,marginLeft:16,paddingRight:8,marginBottom:16}}>
+          {(CHANGELOG[0]&&CHANGELOG[0].items||[]).map(function(item,i){return <li key={i}>{item}</li>;})}
+        </ul>
+        <button onClick={closeChangelog} style={{padding:"8px 16px",borderRadius:9,border:"1.5px solid "+C.gold,background:C.goldDim,color:C.goldL,fontSize:12,fontWeight:600}}>Tamam</button>
+      </div>
+    </div>}
+    {showShortcuts&&<div className="no-print" style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:701,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={function(){setShowShortcuts(false);}}>
+      <div className="up" style={{background:"var(--card)",border:"1px solid var(--border)",borderRadius:16,padding:22,maxWidth:320}} onClick={function(e){e.stopPropagation();}}>
+        <div style={{fontSize:16,fontWeight:700,color:C.cream,marginBottom:12}}>⌨️ Kısayollar</div>
+        <div style={{fontSize:12,color:C.muted,lineHeight:2}}><div><kbd style={{padding:"2px 8px",background:"var(--card2)",borderRadius:6}}>M</kbd> Menü</div><div><kbd style={{padding:"2px 8px",background:"var(--card2)",borderRadius:6}}>F</kbd> Favoriler</div><div><kbd style={{padding:"2px 8px",background:"var(--card2)",borderRadius:6}}>?</kbd> Bu pencere</div><div><kbd style={{padding:"2px 8px",background:"var(--card2)",borderRadius:6}}>Esc</kbd> Kapat</div></div>
+        <button onClick={function(){setShowShortcuts(false);}} style={{marginTop:12,padding:"8px 16px",borderRadius:9,border:"1.5px solid "+C.gold,background:C.goldDim,color:C.goldL,fontSize:12,fontWeight:600}}>Tamam</button>
+      </div>
+    </div>}
+    {showOnboarding&&<div className="no-print" style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",zIndex:702,display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
+      <div className="up" style={{background:"var(--card)",border:"1px solid var(--border)",borderRadius:18,padding:28,maxWidth:360}}>
+        <div style={{fontSize:18,fontWeight:700,color:C.cream,marginBottom:8,fontFamily:"'Playfair Display',serif"}}>{onboardingStep===0?"Hoş geldin 👋":onboardingStep===1?"Favoriler ❤️":"Şef sohbeti 💬"}</div>
+        <p style={{fontSize:13,color:C.muted,lineHeight:1.7,marginBottom:20}}>{onboardingStep===0?"Menü sekmesinden haftalık menü oluşturabilir, tarifleri inceleyebilirsin.":onboardingStep===1?"Beğendiğin tarifleri favorilere ekleyerek tekrar ulaşabilirsin.":"Şef sekmesinde yemek hakkında soru sorabilirsin."}</p>
+        <div style={{display:"flex",gap:10,justifyContent:"flex-end",flexWrap:"wrap"}}>
+          <button onClick={function(){setOnboardingStep(0);finishOnboarding();}} style={{padding:"8px 14px",borderRadius:9,border:"1px solid var(--border)",background:"var(--card2)",color:C.muted,fontSize:12}}>Atla</button>
+          {onboardingStep<2?<button onClick={function(){setOnboardingStep(onboardingStep+1);}} style={{padding:"8px 16px",borderRadius:9,border:"1.5px solid "+C.gold,background:C.goldDim,color:C.goldL,fontSize:12,fontWeight:600}}>Sonraki</button>:<button onClick={finishOnboarding} style={{padding:"8px 16px",borderRadius:9,border:"1.5px solid "+C.gold,background:C.goldDim,color:C.goldL,fontSize:12,fontWeight:600}}>Tamam</button>}
+        </div>
+      </div>
+    </div>}
     {isDev&&showSettings&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:700,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={function(e){if(e.target===e.currentTarget)setShowSettings(false);}}>
       <div className="up" style={{background:"var(--card)",border:"1px solid var(--border)",borderRadius:16,padding:22,maxWidth:400,width:"100%"}} onClick={function(e){e.stopPropagation();}}>
         <div style={{fontSize:16,fontWeight:700,color:C.cream,marginBottom:8}}>⚙️ Ayarlar (geliştirme)</div>
@@ -3801,15 +4024,29 @@ export default function App(){
       {activeTab==="nefes"&&<NefesTab/>}
       {activeTab==="takip"&&<TakipTab/>}
       {activeTab==="akademi"&&<AkademiTab/>}
-      {activeTab==="favoriler"&&<FavorilerTab favorites={favorites} lists={lists} onToggleFav={toggleFav}/>}
+      {activeTab==="favoriler"&&<FavorilerTab favorites={favorites} lists={lists} onToggleFav={toggleFav} onUpdateFavNote={updateFavNote} onGoToMenu={function(){setActiveTab("menu");}} onExportData={exportFavorilerListe}/>}
       {activeTab==="chat"&&<ChatTab/>}
+      {activeTab==="hikaye"&&<HikayeTab/>}
     </div>
-    <div style={{position:"fixed",bottom:0,left:0,right:0,background:isDark?"rgba(10,10,10,0.97)":"rgba(245,239,224,0.97)",backdropFilter:"blur(10px)",borderTop:"1px solid var(--border)",display:"flex",overflowX:"auto",WebkitOverflowScrolling:"touch",scrollbarWidth:"none",zIndex:500,padding:"4px 0 6px"}}>
-      {BOTTOM_TABS.map(function(t){var ac=activeTab===t.id;return <button key={t.id} onClick={function(){setActiveTab(t.id);}} style={{flex:"0 0 auto",minWidth:54,display:"flex",flexDirection:"column",alignItems:"center",gap:1,padding:"3px 1px",background:"transparent",border:"none",color:ac?C.goldL:C.muted}}>
+    <div className="no-print" style={{position:"fixed",bottom:0,left:0,right:0,background:isDark?"rgba(10,10,10,0.97)":"rgba(245,239,224,0.97)",backdropFilter:"blur(10px)",borderTop:"1px solid var(--border)",display:"flex",overflowX:"auto",WebkitOverflowScrolling:"touch",scrollbarWidth:"none",zIndex:500,padding:"4px 0 6px"}}>
+      {BOTTOM_TABS.slice(0,BOTTOM_TABS_VISIBLE).map(function(t){var ac=activeTab===t.id;return <button key={t.id} onClick={function(){setActiveTab(t.id);setShowMoreTabs(false);}} style={{flex:"0 0 auto",minWidth:54,display:"flex",flexDirection:"column",alignItems:"center",gap:1,padding:"3px 1px",background:"transparent",border:"none",color:ac?C.goldL:C.muted}}>
         <span style={{fontSize:ac?19:15,transition:"font-size 0.15s"}}>{t.icon}</span>
         <span style={{fontSize:7,fontWeight:ac?700:400}}>{t.label}</span>
         <span style={{width:12,height:2,borderRadius:2,background:ac?C.gold:"transparent",marginTop:1}}/>
       </button>;})}
+      <button onClick={function(){setShowMoreTabs(!showMoreTabs);}} style={{flex:"0 0 auto",minWidth:54,display:"flex",flexDirection:"column",alignItems:"center",gap:1,padding:"3px 1px",background:showMoreTabs?C.goldDim:"transparent",border:"none",color:BOTTOM_TABS.slice(BOTTOM_TABS_VISIBLE).some(function(t){return activeTab===t.id;})?C.goldL:C.muted}} title="Daha fazla sekme">
+        <span style={{fontSize:18}}>⋯</span>
+        <span style={{fontSize:7,fontWeight:400}}>Daha fazla</span>
+        <span style={{width:12,height:2,borderRadius:2,background:BOTTOM_TABS.slice(BOTTOM_TABS_VISIBLE).some(function(t){return activeTab===t.id;})?C.gold:"transparent",marginTop:1}}/>
+      </button>
     </div>
+    {showMoreTabs&&<div style={{position:"fixed",inset:0,zIndex:502,background:"rgba(0,0,0,0.5)"}} onClick={function(){setShowMoreTabs(false);}}>
+      <div style={{position:"fixed",bottom:68,left:12,right:12,background:"var(--card)",borderRadius:16,border:"1px solid var(--border)",padding:16,maxHeight:"60vh",overflowY:"auto",display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}} onClick={function(e){e.stopPropagation();}}>
+        {BOTTOM_TABS.slice(BOTTOM_TABS_VISIBLE).map(function(t){var ac=activeTab===t.id;return <button key={t.id} onClick={function(){setActiveTab(t.id);setShowMoreTabs(false);}} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,padding:"12px 8px",borderRadius:12,border:"1.5px solid "+(ac?C.gold:"var(--border)"),background:ac?C.goldDim:"var(--card2)",color:ac?C.goldL:C.muted}}>
+          <span style={{fontSize:24}}>{t.icon}</span>
+          <span style={{fontSize:10,fontWeight:ac?700:400}}>{t.label}</span>
+        </button>;})}
+      </div>
+    </div>}
   </div>;
 }
