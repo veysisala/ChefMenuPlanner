@@ -4,13 +4,12 @@ export function sleep(ms) {
   return new Promise(function (r) { setTimeout(r, ms); });
 }
 
-const USE_PROXY = typeof window !== 'undefined';
-export const API_BASE = USE_PROXY ? '/api/anthropic-proxy' : 'https://api.anthropic.com';
+export const API_BASE = 'https://api.anthropic.com';
 
-/** Proxy kullanırken path query ile gider (Vercel 404 önleme); doğrudan API'de path URL'de. */
+/** Doğrudan Anthropic API'sine gider (anthropic-dangerous-direct-browser-access header ile). */
 export function apiUrl(path) {
   const p = (path || 'v1/messages').replace(/^\/+/, '');
-  return USE_PROXY ? API_BASE + '?path=' + encodeURIComponent(p) : API_BASE + '/' + p;
+  return API_BASE + '/' + p;
 }
 
 /** Header'da kullanılacak API anahtarını temizler (gizli karakterler kaldırılır). Dışa aktarılır; Ayarlar'da kaydetmeden önce kullanın. */
@@ -37,14 +36,11 @@ export function getAnthropicHeaders() {
   const headers = {
     'Content-Type': 'application/json',
     'anthropic-version': '2023-06-01',
+    'anthropic-dangerous-direct-browser-access': 'true',
   };
   const key = toHeaderSafe(getApiKey());
   if (key) {
-    if (USE_PROXY) {
-      headers['X-Client-Api-Key'] = key;
-    } else {
-      headers['x-api-key'] = key;
-    }
+    headers['x-api-key'] = key;
   }
   return headers;
 }
@@ -57,14 +53,15 @@ export async function testApiKey(keyOrEmpty) {
   const headers = {
     'Content-Type': 'application/json',
     'anthropic-version': '2023-06-01',
-    'X-Client-Api-Key': key,
+    'anthropic-dangerous-direct-browser-access': 'true',
+    'x-api-key': key,
   };
   try {
     const res = await fetch(apiUrl('v1/messages'), {
       method: 'POST',
       headers,
       body: JSON.stringify({
-        model: 'claude-3-5-haiku-20241022',
+        model: 'claude-haiku-4-5-20251001',
         max_tokens: 20,
         messages: [{ role: 'user', content: 'Say "OK"' }],
       }),

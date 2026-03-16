@@ -11,7 +11,7 @@ export default async function handler(req, res) {
   }
 
   const path = (req.query.path || 'v1/messages').replace(/^\/+/, '');
-  const rawKey = (req.headers['x-client-api-key'] || process.env.ANTHROPIC_API_KEY || process.env.VITE_ANTHROPIC_API_KEY || '').trim();
+  const rawKey = (process.env.ANTHROPIC_API_KEY || process.env.VITE_ANTHROPIC_API_KEY || req.headers['x-client-api-key'] || '').trim();
   const apiKey = rawKey.replace(/[^\x20-\x7E]/g, '').trim();
 
   if (!apiKey) {
